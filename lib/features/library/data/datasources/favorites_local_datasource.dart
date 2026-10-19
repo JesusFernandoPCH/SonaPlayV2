@@ -39,6 +39,13 @@ class FavoritesLocalDataSource {
     return box.keys.cast<String>().toList();
   }
 
+  /// Emits the favorite song IDs now and after every change
+  Stream<Set<String>> watchFavoriteIds() async* {
+    final box = await _favoritesBox;
+    yield box.keys.cast<String>().toSet();
+    yield* box.watch().map((_) => box.keys.cast<String>().toSet());
+  }
+
   /// Get all favorites with timestamps (sorted by most recent)
   Future<List<FavoriteModel>> getAllFavoritesWithTimestamps() async {
     final box = await _favoritesBox;

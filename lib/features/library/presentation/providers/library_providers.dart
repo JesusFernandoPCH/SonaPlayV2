@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
+import 'package:sonaplay/features/library/data/datasources/favorites_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/local_music_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/metadata_persistence_datasource.dart';
@@ -12,6 +13,14 @@ final songsProvider = StreamProvider<List<Song>>((ref) {
     LocalMusicDataSource(),
     MetadataPersistenceDataSource(),
   ).getAllSongs();
+});
+
+final favoritesDataSourceProvider = Provider(
+  (ref) => FavoritesLocalDataSource(),
+);
+
+final favoriteIdsProvider = StreamProvider<Set<String>>((ref) {
+  return ref.watch(favoritesDataSourceProvider).watchFavoriteIds();
 });
 
 final trashIdsProvider = StreamProvider<List<String>>((ref) {

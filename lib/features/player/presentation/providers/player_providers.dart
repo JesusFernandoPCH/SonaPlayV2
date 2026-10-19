@@ -30,6 +30,14 @@ final artworkProvider = FutureProvider.family<Uint8List?, String>((ref, id) {
   return ref.watch(mediaStoreProvider).artwork(id, size: 300);
 });
 
+/// Sharper artwork for the full-screen player
+final largeArtworkProvider = FutureProvider.family<Uint8List?, String>((
+  ref,
+  id,
+) {
+  return ref.watch(mediaStoreProvider).artwork(id, size: 900);
+});
+
 /// App accent: the dominant color of the current song's artwork
 final accentColorProvider = FutureProvider<Color>((ref) async {
   final song = ref.watch(currentSongProvider).value;

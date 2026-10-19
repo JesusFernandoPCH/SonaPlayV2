@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/features/player/presentation/screens/player_screen.dart';
 
 /// Bottom bar with the current song; hidden while nothing is queued
 class MiniPlayer extends ConsumerWidget {
@@ -35,52 +36,58 @@ class MiniPlayer extends ConsumerWidget {
               minHeight: 2,
               backgroundColor: Colors.transparent,
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-              child: Row(
-                children: [
-                  Artwork(songId: song.id, size: 44),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          song.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        Text(
-                          song.artist,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
+            InkWell(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const PlayerScreen()),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                child: Row(
+                  children: [
+                    Artwork(songId: song.id, size: 44),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Anterior',
-                    icon: const Icon(Icons.skip_previous_rounded),
-                    onPressed: player.skipToPrevious,
-                  ),
-                  IconButton.filled(
-                    tooltip: isPlaying ? 'Pausar' : 'Reproducir',
-                    icon: Icon(
-                      isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
+                    IconButton(
+                      tooltip: 'Anterior',
+                      icon: const Icon(Icons.skip_previous_rounded),
+                      onPressed: player.skipToPrevious,
                     ),
-                    onPressed: isPlaying ? player.pause : player.resume,
-                  ),
-                  IconButton(
-                    tooltip: 'Siguiente',
-                    icon: const Icon(Icons.skip_next_rounded),
-                    onPressed: player.skipToNext,
-                  ),
-                ],
+                    IconButton.filled(
+                      tooltip: isPlaying ? 'Pausar' : 'Reproducir',
+                      icon: Icon(
+                        isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
+                      onPressed: isPlaying ? player.pause : player.resume,
+                    ),
+                    IconButton(
+                      tooltip: 'Siguiente',
+                      icon: const Icon(Icons.skip_next_rounded),
+                      onPressed: player.skipToNext,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

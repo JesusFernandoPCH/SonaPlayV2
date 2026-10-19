@@ -5,6 +5,9 @@ enum RepeatMode {
 
   /// Repeat current song only
   one,
+
+  /// Stop after the last song (kept last: the handler maps modes by index)
+  off,
 }
 
 /// Player state entity representing current playback status

@@ -5,10 +5,16 @@ import 'package:just_audio/just_audio.dart' as ja;
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/player/data/datasources/playback_persistence_datasource.dart';
 import 'package:sonaplay/features/player/domain/entities/player_state.dart';
+import 'package:sonaplay/features/settings/data/datasources/settings_local_datasource.dart';
 
 /// Datasource for audio playback using just_audio
 class AudioPlayerDataSource {
-  final ja.AudioPlayer _player = ja.AudioPlayer();
+  /// System equalizer wired into the playback pipeline
+  final ja.AndroidEqualizer equalizer = ja.AndroidEqualizer();
+  late final ja.AudioPlayer _player = ja.AudioPlayer(
+    audioPipeline: ja.AudioPipeline(androidAudioEffects: [equalizer]),
+  );
+  bool _equalizerRestored = false;
   final StreamController<PlayerState> _stateController =
       StreamController<PlayerState>.broadcast();
   final StreamController<Song?> _currentSongController =
@@ -86,14 +92,14 @@ class AudioPlayerDataSource {
       // Repeat current song
       await _player.seek(Duration.zero);
       await _player.play();
+    } else if (_currentIndex < _activePlaylist.length - 1) {
+      await skipToNext();
+    } else if (_repeatMode == RepeatMode.all) {
+      await _playSongAtIndex(0);
     } else {
-      // RepeatMode.all - go to next or loop
-      if (_currentIndex < _activePlaylist.length - 1) {
-        await skipToNext();
-      } else {
-        // Loop back to start
-        await _playSongAtIndex(0);
-      }
+      // RepeatMode.off: end of the queue, rewind and stay paused
+      await _player.pause();
+      await _player.seek(Duration.zero);
     }
   }
 
@@ -105,6 +111,11 @@ class AudioPlayerDataSource {
       _emitState();
 
       await _player.setFilePath(song.filePath);
+      if (!_equalizerRestored) {
+        // Band info only exists once the native player has loaded audio
+        _equalizerRestored = true;
+        unawaited(_restoreEqualizer());
+      }
       await _player.play();
     } catch (e) {
       throw Exception('Failed to play song: $e');
@@ -290,6 +301,16 @@ class AudioPlayerDataSource {
     }
 
     _emitState();
+  }
+
+  Future<void> _restoreEqualizer() async {
+    final settings = SettingsLocalDataSource();
+    final bands = (await equalizer.parameters).bands;
+    final gains = settings.equalizerGains;
+    for (var i = 0; i < bands.length && i < gains.length; i++) {
+      await bands[i].setGain(gains[i]);
+    }
+    await equalizer.setEnabled(settings.equalizerEnabled);
   }
 
   /// Dispose resources
