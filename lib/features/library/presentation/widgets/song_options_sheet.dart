@@ -192,7 +192,8 @@ Future<void> hideSongs(BuildContext context, List<Song> songs) async {
 }
 
 /// Moves songs to "Eliminado recientemente"; asks first when there are several
-Future<void> trashSongs(BuildContext context, List<Song> songs) async {
+/// Returns false if the user backed out
+Future<bool> trashSongs(BuildContext context, List<Song> songs) async {
   if (songs.length > 1) {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -214,13 +215,13 @@ Future<void> trashSongs(BuildContext context, List<Song> songs) async {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true) return false;
   }
   final trash = DeletedSongsLocalDataSource();
   for (final s in songs) {
     await trash.softDeleteSong(s.id);
   }
-  if (!context.mounted) return;
+  if (!context.mounted) return true;
   _notify(
     context,
     songs.length == 1
@@ -228,9 +229,11 @@ Future<void> trashSongs(BuildContext context, List<Song> songs) async {
         : '${songs.length} canciones movidas a Eliminado recientemente',
     undo: () => trash.forget(songs.map((s) => s.id)),
   );
+  return true;
 }
 
-Future<void> addSongsToPlaylist(
+/// Returns false if no playlist was picked
+Future<bool> addSongsToPlaylist(
   BuildContext context,
   ProviderContainer ref,
   List<Song> songs,
@@ -240,7 +243,7 @@ Future<void> addSongsToPlaylist(
   final playlists = await ref
       .read(playlistsDataSourceProvider)
       .getAllPlaylists();
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   final target = await showModalBottomSheet<Playlist?>(
     context: context,
     showDragHandle: true,
@@ -269,13 +272,13 @@ Future<void> addSongsToPlaylist(
       ),
     ),
   );
-  if (target == null) return;
+  if (target == null) return false;
   final dataSource = ref.read(playlistsDataSourceProvider);
   var added = 0;
   for (final s in songs) {
     if (await dataSource.addSongToPlaylist(target.id, s.id)) added++;
   }
-  if (!context.mounted) return;
+  if (!context.mounted) return true;
   _notify(
     context,
     added == 0
@@ -286,6 +289,7 @@ Future<void> addSongsToPlaylist(
         ? '1 canción agregada a ${target.name}'
         : '$added canciones agregadas a ${target.name}',
   );
+  return true;
 }
 
 const _speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];

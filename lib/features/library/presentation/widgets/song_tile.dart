@@ -13,9 +13,6 @@ class SongTile extends StatelessWidget {
   /// Smaller artwork and tighter rows, to fit more songs on screen
   final bool compact;
 
-  /// Null outside multi-select; otherwise whether this song is checked
-  final bool? checked;
-
   const SongTile({
     super.key,
     required this.song,
@@ -23,12 +20,10 @@ class SongTile extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.compact = false,
-    this.checked,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final artSize = compact ? 40.0 : 48.0;
     return Pressable(
       child: ListTile(
@@ -39,15 +34,7 @@ class SongTile extends StatelessWidget {
         visualDensity: compact
             ? const VisualDensity(vertical: -2)
             : VisualDensity.standard,
-        tileColor: checked == true ? scheme.secondaryContainer : null,
-        selectedTileColor: checked == true ? scheme.secondaryContainer : null,
-        leading: checked == true
-            ? CircleAvatar(
-                radius: artSize / 2,
-                backgroundColor: scheme.primary,
-                child: Icon(Icons.check_rounded, color: scheme.onPrimary),
-              )
-            : Artwork(songId: song.id, size: artSize),
+        leading: Artwork(songId: song.id, size: artSize),
         title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(
           '${song.artist} · ${song.formattedDuration}',
@@ -55,13 +42,11 @@ class SongTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         // The playing song is marked by the accent color (selected)
-        trailing: checked != null
-            ? null
-            : IconButton(
-                tooltip: 'Opciones de ${song.title}',
-                icon: const Icon(Icons.more_vert_rounded),
-                onPressed: () => showSongOptions(context, song),
-              ),
+        trailing: IconButton(
+          tooltip: 'Opciones de ${song.title}',
+          icon: const Icon(Icons.more_vert_rounded),
+          onPressed: () => showSongOptions(context, song),
+        ),
       ),
     );
   }
@@ -73,7 +58,6 @@ class SongGridTile extends StatelessWidget {
   final bool isCurrent;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  final bool? checked;
 
   const SongGridTile({
     super.key,
@@ -81,7 +65,6 @@ class SongGridTile extends StatelessWidget {
     required this.isCurrent,
     required this.onTap,
     this.onLongPress,
-    this.checked,
   });
 
   @override
@@ -90,7 +73,7 @@ class SongGridTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     return Pressable(
       child: Material(
-        color: checked == true ? scheme.secondaryContainer : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -107,23 +90,7 @@ class SongGridTile extends StatelessWidget {
                     builder: (context, box) => Stack(
                       children: [
                         Artwork(songId: song.id, size: box.maxWidth),
-                        if (checked == true)
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: scheme.primary.withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(
-                                  box.maxWidth * 0.16,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.check_circle_rounded,
-                                size: 40,
-                                color: scheme.onPrimary,
-                              ),
-                            ),
-                          ),
-                        if (isCurrent && checked != true)
+                        if (isCurrent)
                           Positioned(
                             right: 8,
                             bottom: 8,
@@ -171,17 +138,16 @@ class SongGridTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (checked == null)
-                      SizedBox.square(
-                        dimension: 40,
-                        child: IconButton(
-                          tooltip: 'Opciones de ${song.title}',
-                          padding: EdgeInsets.zero,
-                          iconSize: 20,
-                          icon: const Icon(Icons.more_vert_rounded),
-                          onPressed: () => showSongOptions(context, song),
-                        ),
+                    SizedBox.square(
+                      dimension: 40,
+                      child: IconButton(
+                        tooltip: 'Opciones de ${song.title}',
+                        padding: EdgeInsets.zero,
+                        iconSize: 20,
+                        icon: const Icon(Icons.more_vert_rounded),
+                        onPressed: () => showSongOptions(context, song),
                       ),
+                    ),
                   ],
                 ),
               ],

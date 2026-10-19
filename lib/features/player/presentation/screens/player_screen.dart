@@ -52,9 +52,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
     final state = ref.watch(playerStateProvider).value ?? const PlayerState();
     final player = ref.watch(audioHandlerProvider).audioPlayer;
     final sleepEnds = ref.watch(sleepTimerProvider);
-    final isFavorite =
-        song != null &&
-        (ref.watch(favoriteIdsProvider).value?.contains(song.id) ?? false);
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -138,106 +135,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                             ),
                           ],
                         ),
-                        Expanded(
-                          child: GestureDetector(
-                            // Swipe the artwork sideways to change song
-                            onHorizontalDragEnd: (d) {
-                              final v = d.primaryVelocity ?? 0;
-                              if (v < -300) player.skipToNext();
-                              if (v > 300) player.skipToPrevious();
-                            },
-                            child: LayoutBuilder(
-                              builder: (context, box) {
-                                final size = min(
-                                  box.maxWidth,
-                                  box.maxHeight - 32,
-                                );
-                                return Center(
-                                  // Measured by the route; hidden while its
-                                  // flying copy moves to or from the card
-                                  child: _HiddenWhileMorphing(
-                                    key: _route?.artworkKey,
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 350,
-                                      ),
-                                      child: DecoratedBox(
-                                        key: ValueKey(song.id),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            size * 0.16,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: scheme.primary.withValues(
-                                                alpha: 0.35,
-                                              ),
-                                              blurRadius: 48,
-                                              offset: const Offset(0, 16),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Artwork(
-                                          songId: song.id,
-                                          size: size,
-                                          large: true,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    song.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: text.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    song.artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: text.titleMedium?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: isFavorite
-                                  ? 'Quitar de favoritos'
-                                  : 'Agregar a favoritos',
-                              iconSize: 28,
-                              icon: Icon(
-                                isFavorite
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: isFavorite ? scheme.primary : null,
-                              ),
-                              onPressed: () {
-                                final favorites = ref.read(
-                                  favoritesDataSourceProvider,
-                                );
-                                isFavorite
-                                    ? favorites.removeFavorite(song.id)
-                                    : favorites.addFavorite(song.id);
-                              },
-                            ),
-                          ],
-                        ),
+                        // Artwork and title: swipe sideways anywhere here
+                        // to move through the queue
+                        Expanded(child: _SongCarousel(route: _route)),
                         const SizedBox(height: 12),
                         SliderTheme(
                           data: SliderTheme.of(context).copyWith(
@@ -642,6 +542,184 @@ class _HiddenWhileMorphing extends StatelessWidget {
       builder: (context, child) =>
           Opacity(opacity: animation.value >= 1 ? 1 : 0, child: child),
       child: child,
+    );
+  }
+}
+
+/// The queue as pages of artwork and title. Neighbours slide in under the
+/// finger; the song changes once the swipe settles on a page.
+class _SongCarousel extends ConsumerStatefulWidget {
+  final PlayerRoute? route;
+  const _SongCarousel({required this.route});
+
+  @override
+  ConsumerState<_SongCarousel> createState() => _SongCarouselState();
+}
+
+class _SongCarouselState extends ConsumerState<_SongCarousel> {
+  late final _pages = PageController(
+    initialPage: ref.read(audioHandlerProvider).audioPlayer.currentIndex ?? 0,
+  );
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  void _follow(int? index) {
+    if (index == null || !_pages.hasClients) return;
+    final shown = _pages.page?.round() ?? index;
+    if (shown == index) return;
+    // Next/previous glide over; bigger jumps (reorder, new queue) just cut
+    (shown - index).abs() == 1
+        ? _pages.animateToPage(
+            index,
+            duration: Motion.slow,
+            curve: Motion.enter,
+          )
+        : _pages.jumpToPage(index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(playerStateProvider);
+    final player = ref.watch(audioHandlerProvider).audioPlayer;
+    final queue = player.currentPlaylist;
+    final current = player.currentIndex;
+    ref.listen(currentSongProvider, (_, _) => _follow(player.currentIndex));
+    final favorites = ref.watch(favoriteIdsProvider).value ?? const {};
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return NotificationListener<ScrollEndNotification>(
+      onNotification: (_) {
+        final page = _pages.page?.round();
+        if (page != null && page != player.currentIndex) {
+          player.skipToIndex(page);
+        }
+        return false;
+      },
+      // Full width (past the screen padding) so pages slide edge to edge
+      child: LayoutBuilder(
+        builder: (context, box) => OverflowBox(
+          minWidth: box.maxWidth + 48,
+          maxWidth: box.maxWidth + 48,
+          child: PageView.builder(
+            controller: _pages,
+            itemCount: queue.length,
+            itemBuilder: (context, i) {
+              final song = queue[i];
+              final isFavorite = favorites.contains(song.id);
+              return AnimatedBuilder(
+                animation: _pages,
+                // Pages away from the centre shrink a little
+                builder: (context, child) {
+                  final page =
+                      _pages.hasClients && _pages.position.hasContentDimensions
+                      ? _pages.page ?? i.toDouble()
+                      : (current ?? 0).toDouble();
+                  final away = (page - i).abs().clamp(0.0, 1.0);
+                  return Transform.scale(scale: 1 - 0.1 * away, child: child);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, box) {
+                            final size = min(box.maxWidth, box.maxHeight - 32);
+                            final artwork = DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  size * 0.16,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: scheme.primary.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    blurRadius: 48,
+                                    offset: const Offset(0, 16),
+                                  ),
+                                ],
+                              ),
+                              child: Artwork(
+                                songId: song.id,
+                                size: size,
+                                large: true,
+                              ),
+                            );
+                            return Center(
+                              // The playing song's artwork is measured by the
+                              // route and hidden while its copy flies
+                              child: i == current
+                                  ? _HiddenWhileMorphing(
+                                      key: widget.route?.artworkKey,
+                                      child: artwork,
+                                    )
+                                  : artwork,
+                            );
+                          },
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  song.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  song.artist,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.titleMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: isFavorite
+                                ? 'Quitar de favoritos'
+                                : 'Agregar a favoritos',
+                            iconSize: 28,
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isFavorite ? scheme.primary : null,
+                            ),
+                            onPressed: () {
+                              final store = ref.read(
+                                favoritesDataSourceProvider,
+                              );
+                              isFavorite
+                                  ? store.removeFavorite(song.id)
+                                  : store.addFavorite(song.id);
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
