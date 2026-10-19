@@ -19,11 +19,15 @@ class DeletedSongsLocalDataSource {
     }
   }
 
-  Future<void> restoreSong(String songId) async {
+  Future<void> restoreSong(String songId) => forget([songId]);
+
+  /// Drops IDs from the trash (restored, or deleted from the device for good)
+  Future<void> forget(Iterable<String> songIds) async {
     final box = await _box;
     final current = _read(box);
-    if (current.remove(songId)) {
-      await box.put(_key, current);
+    final ids = songIds.toSet();
+    if (current.any(ids.contains)) {
+      await box.put(_key, current..removeWhere(ids.contains));
     }
   }
 

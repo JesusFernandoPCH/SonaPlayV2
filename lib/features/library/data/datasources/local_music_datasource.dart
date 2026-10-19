@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:on_audio_query/on_audio_query.dart' as audio_query;
+import 'package:sonaplay/features/library/data/datasources/media_store_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/songs_persistence_datasource.dart';
 import 'package:sonaplay/features/library/data/models/song_model.dart';
 import 'package:sonaplay/features/settings/data/datasources/settings_local_datasource.dart';
 
-/// Datasource for local music files using on_audio_query
+/// Datasource for local music files (MediaStore + Hive cache)
 class LocalMusicDataSource {
-  final audio_query.OnAudioQuery _audioQuery = audio_query.OnAudioQuery();
+  final MediaStoreDataSource _mediaStore = MediaStoreDataSource();
   final SongsPersistenceDataSource _persistence = SongsPersistenceDataSource();
 
   /// Query all songs from device (Optimized with Streams)
@@ -25,17 +25,8 @@ class LocalMusicDataSource {
   /// Perform scanning and metadata extraction in background as a Stream
   Stream<List<SongModel>> _backgroundScanAndSyncStream() async* {
     try {
-      final songs = await _audioQuery.querySongs(
-        sortType: audio_query.SongSortType.TITLE,
-        orderType: audio_query.OrderType.ASC_OR_SMALLER,
-        uriType: audio_query.UriType.EXTERNAL,
-      );
-
-      // Extract metadata in background isolate to avoid UI jank
-      final List<SongModel> mappedSongs = await compute(
-        _parseSongsInIsolate,
-        songs,
-      );
+      // The native side queries MediaStore off the UI thread, sorted by title
+      final mappedSongs = await _mediaStore.querySongs();
 
       // Filter by min duration from settings
       final settings = SettingsLocalDataSource();
@@ -66,9 +57,4 @@ class LocalMusicDataSource {
     final box = await _persistence.getCachedSongs();
     return box.where((song) => song.album == album).toList();
   }
-}
-
-/// Helper function for compute (must be top-level or static)
-List<SongModel> _parseSongsInIsolate(List<audio_query.SongModel> audioSongs) {
-  return audioSongs.map((song) => SongModel.fromAudioQuery(song)).toList();
 }

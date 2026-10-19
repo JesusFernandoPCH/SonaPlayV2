@@ -1,6 +1,7 @@
 import 'dart:io';
-import 'package:on_audio_query/on_audio_query.dart';
+
 import 'package:path_provider/path_provider.dart';
+import 'package:sonaplay/features/library/data/datasources/media_store_datasource.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 
 /// Service to handle artwork extraction and caching for system notifications.
@@ -8,12 +9,12 @@ import 'package:sonaplay/features/library/domain/entities/song.dart';
 /// This service ensures that the system notification area can display high-quality
 /// artwork for the currently playing song by providing a valid URI.
 class NotificationArtworkService {
-  final OnAudioQuery _audioQuery = OnAudioQuery();
+  final MediaStoreDataSource _mediaStore = MediaStoreDataSource();
   static const String _folderName = 'notification_art';
 
   /// Returns a valid URI for the song's artwork.
   ///
-  /// Extracts the artwork using [on_audio_query] and caches it in a temporary
+  /// Extracts the artwork through MediaStore and caches it in a temporary
   /// directory to provide a valid 'file://' URI for the system notification.
   Future<Uri?> getArtworkUri(Song song) async {
     // 1. Manually extract and cache the artwork.
@@ -35,14 +36,7 @@ class NotificationArtworkService {
         return file.uri;
       }
 
-      // Query bytes from on_audio_query
-      final bytes = await _audioQuery.queryArtwork(
-        int.parse(song.id),
-        ArtworkType.AUDIO,
-        size: 500, // Sufficient for notification display
-        quality: 100,
-        format: ArtworkFormat.JPEG,
-      );
+      final bytes = await _mediaStore.artwork(song.id, size: 500);
 
       if (bytes != null && bytes.isNotEmpty) {
         await file.writeAsBytes(bytes);

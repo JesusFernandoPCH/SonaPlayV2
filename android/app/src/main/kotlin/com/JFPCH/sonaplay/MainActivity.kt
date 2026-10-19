@@ -22,9 +22,11 @@ import com.ryanheise.audioservice.AudioServiceFragmentActivity
 class MainActivity: AudioServiceFragmentActivity() {
     private val CHANNEL = "sonaplay/ringtone"
     private val uiThreadHandler = Handler(Looper.getMainLooper())
+    private val mediaStore = MediaStoreChannel(this)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        mediaStore.attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setAndroidRingtone") {
                 val filePath = call.argument<String>("path") ?: return@setMethodCallHandler

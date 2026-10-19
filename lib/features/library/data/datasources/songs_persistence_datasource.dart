@@ -22,6 +22,12 @@ class SongsPersistenceDataSource {
     return box.values.toList();
   }
 
+  /// Remove specific songs from the cache
+  Future<void> removeSongs(Iterable<String> songIds) async {
+    final box = await Hive.openBox<SongModel>(boxName);
+    await box.deleteAll(songIds);
+  }
+
   /// Check if cache is empty
   Future<bool> isCacheEmpty() async {
     final box = await Hive.openBox<SongModel>(boxName);

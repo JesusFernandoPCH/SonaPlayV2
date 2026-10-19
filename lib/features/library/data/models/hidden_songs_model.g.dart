@@ -16,9 +16,7 @@ class HiddenSongsModelAdapter extends TypeAdapter<HiddenSongsModel> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return HiddenSongsModel(
-      songIds: (fields[0] as List).cast<String>(),
-    );
+    return HiddenSongsModel(songIds: (fields[0] as List).cast<String>());
   }
 
   @override

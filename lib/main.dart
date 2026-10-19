@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:sonaplay/dev/media_check_screen.dart';
 import 'package:sonaplay/features/library/data/models/favorite_model.dart';
 import 'package:sonaplay/features/library/data/models/hidden_songs_model.dart';
 import 'package:sonaplay/features/library/data/models/playlist_model.dart';
@@ -67,13 +68,13 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // ponytail: placeholder home until the UI/UX redesign lands
+  // ponytail: device test harness until the UI/UX redesign lands
   runApp(
     const ProviderScope(
       child: MaterialApp(
         title: 'SonaPlay',
         debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: Text('SonaPlay V2'))),
+        home: MediaCheckScreen(),
       ),
     ),
   );

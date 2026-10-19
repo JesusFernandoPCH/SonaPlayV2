@@ -1,10 +1,9 @@
 import 'package:hive_ce/hive.dart';
-import 'package:on_audio_query/on_audio_query.dart' as audio_query;
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 
 part 'song_model.g.dart';
 
-/// Data model for Song (maps from on_audio_query)
+/// Data model for Song (maps from Android MediaStore)
 @HiveType(typeId: 4)
 class SongModel extends Song {
   @override
@@ -55,18 +54,19 @@ class SongModel extends Song {
     required this.filePath,
   });
 
-  /// Create from on_audio_query SongModel
-  factory SongModel.fromAudioQuery(audio_query.SongModel audioSong) {
+  /// Create from a row of the native "sonaplay/media" channel
+  factory SongModel.fromMediaStore(Map<String, Object?> row) {
     return SongModel(
-      id: audioSong.id.toString(),
-      title: audioSong.title,
-      artist: audioSong.artist ?? 'Unknown Artist',
-      album: audioSong.album,
-      albumId: audioSong.albumId?.toString(),
-      duration: audioSong.duration,
-      dateAdded: audioSong.dateAdded,
-      artworkPath: null, // Will be queried separately if needed
-      filePath: audioSong.data,
+      id: '${row['id']}',
+      title: row['title'] as String,
+      artist: row['artist'] as String? ?? 'Unknown Artist',
+      album: row['album'] as String?,
+      albumId: row['albumId']?.toString(),
+      duration: row['duration'] as int?,
+      dateAdded: row['dateAdded'] as int?,
+      artworkPath:
+          null, // Queried separately through MediaStoreDataSource.artwork
+      filePath: row['path'] as String,
     );
   }
 

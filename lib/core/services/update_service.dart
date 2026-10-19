@@ -10,8 +10,7 @@ class UpdateService {
       await _remoteConfig.setDefaults({
         "min_version_required":
             "1.0.0", //no olvidar cambiar pubspec.yaml linea 19
-        "update_url":
-            "https://play.google.com/store/apps/details?id=com.example.sonaplay",
+        "update_url": "https://play.google.com/store/apps/details?id=com.example.sonaplay",
       });
 
       await _remoteConfig.setConfigSettings(

@@ -5,7 +5,11 @@ import 'package:hive_ce/hive.dart';
 import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/favorites_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
+import 'package:sonaplay/features/library/data/datasources/media_store_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/playlists_local_datasource.dart';
+import 'package:sonaplay/features/library/data/datasources/songs_persistence_datasource.dart';
+import 'package:sonaplay/features/library/data/models/song_model.dart';
+import 'package:sonaplay/features/library/data/services/trash_purger.dart';
 import 'package:sonaplay/features/library/data/models/favorite_model.dart';
 import 'package:sonaplay/features/library/data/models/hidden_songs_model.dart';
 import 'package:sonaplay/features/library/data/models/playlist_model.dart';
@@ -14,6 +18,23 @@ import 'package:sonaplay/features/library/data/repositories/hidden_songs_reposit
 import 'package:sonaplay/features/library/data/repositories/playlists_repository_impl.dart';
 import 'package:sonaplay/features/library/domain/entities/playlist.dart';
 
+/// Simulates the system dialog: only [allowed] IDs get deleted
+class _FakeMediaStore extends MediaStoreDataSource {
+  final Set<String> allowed;
+  _FakeMediaStore({required this.allowed});
+
+  @override
+  Future<List<String>> deleteSongs(List<String> songIds) async =>
+      songIds.where(allowed.contains).toList();
+}
+
+SongModel _song(String id) => SongModel(
+  id: id,
+  title: 'Song $id',
+  artist: 'Artist',
+  filePath: '/music/$id.mp3',
+);
+
 void main() {
   late Directory dir;
 
@@ -21,6 +42,7 @@ void main() {
     Hive.registerAdapter(FavoriteModelAdapter());
     Hive.registerAdapter(PlaylistModelAdapter());
     Hive.registerAdapter(HiddenSongsModelAdapter());
+    Hive.registerAdapter(SongModelAdapter());
   });
 
   setUp(() async {
@@ -82,10 +104,53 @@ void main() {
     expect(await repo.isSongHidden('1'), isFalse);
   });
 
+  test('TrashPurger cleans up only what the system deleted', () async {
+    final trash = DeletedSongsLocalDataSource();
+    final favorites = FavoritesLocalDataSource();
+    final hidden = HiddenSongsLocalDataSource();
+    final playlists = PlaylistsLocalDataSource();
+    final cache = SongsPersistenceDataSource();
+    await cache.saveSongs([_song('1'), _song('2')]);
+    await trash.softDeleteSong('1');
+    await trash.softDeleteSong('2');
+    await favorites.addFavorite('1');
+    await hidden.hideSong('1');
+    await playlists.createPlaylist(
+      Playlist(
+        id: 'p',
+        name: 'Mix',
+        songIds: const ['1', '2'],
+        createdAt: DateTime(2026),
+      ),
+    );
+
+    final purger = TrashPurger(
+      mediaStore: _FakeMediaStore(allowed: {'1'}),
+      trash: trash,
+      favorites: favorites,
+      hidden: hidden,
+      playlists: playlists,
+      cache: cache,
+      ensureWriteAccess: () async {},
+    );
+
+    expect(await purger.purge(['1', '2']), ['1']);
+    expect(await trash.getDeletedSongIds(), ['2']);
+    expect(await favorites.isFavorite('1'), isFalse);
+    expect(await hidden.isSongHidden('1'), isFalse);
+    expect((await playlists.getPlaylist('p'))!.songIds, ['2']);
+    expect((await cache.getCachedSongs()).map((s) => s.id), ['2']);
+  });
+
   test('PlaylistsRepositoryImpl rejects duplicate songs', () async {
     final repo = PlaylistsRepositoryImpl(PlaylistsLocalDataSource());
     await repo.createPlaylist(
-      Playlist(id: 'p', name: 'Mix', songIds: const [], createdAt: DateTime(2026)),
+      Playlist(
+        id: 'p',
+        name: 'Mix',
+        songIds: const [],
+        createdAt: DateTime(2026),
+      ),
     );
 
     expect(await repo.addSongToPlaylist('p', '1'), isTrue);

@@ -36,7 +36,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.4.3
   permission_handler: ^13.0.2
-  on_audio_query: 2.9.0
   just_audio: ^0.10.6
   audio_session: ^0.2.4
   audio_service: ^0.18.19
@@ -102,7 +101,3 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-dependency_overrides:
-  # Vendored copy with AGP namespace fix, see packages/on_audio_query_android
-  on_audio_query_android:
-    path: packages/on_audio_query_android
