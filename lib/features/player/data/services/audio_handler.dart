@@ -1,0 +1,284 @@
+import 'dart:async';
+import 'package:audio_service/audio_service.dart';
+import 'package:sonaplay/features/library/domain/entities/song.dart';
+import 'package:sonaplay/features/player/data/datasources/audio_player_datasource.dart';
+import 'package:sonaplay/features/player/data/services/notification_artwork_service.dart';
+import 'package:sonaplay/features/player/domain/entities/player_state.dart';
+
+/// AudioHandler for managing audio playback as a foreground service
+/// This service survives app removal from Recents and manages media notification
+class SonaPlayAudioHandler extends BaseAudioHandler
+    with QueueHandler, SeekHandler {
+  final AudioPlayerDataSource audioPlayer; // Public for provider access
+  final NotificationArtworkService _artworkService =
+      NotificationArtworkService();
+
+  // Stream subscriptions
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<Song?>? _currentSongSubscription;
+
+  // Multi-tap detection for wired headphones
+  Timer? _clickTimer;
+  int _clickCount = 0;
+
+  SonaPlayAudioHandler(this.audioPlayer) {
+    _init();
+  }
+
+  /// Initialize listeners and set initial state
+  void _init() {
+    // Listen to player state changes
+    _playerStateSubscription = audioPlayer.playerStateStream.listen((state) {
+      _updatePlaybackState(state);
+    });
+
+    // Listen to current song changes
+    _currentSongSubscription = audioPlayer.currentSongStream.listen((song) {
+      if (song != null) {
+        _updateMediaItem(song);
+      }
+    });
+
+    // Set initial playback state
+    playbackState.add(
+      PlaybackState(
+        controls: [
+          MediaControl.skipToPrevious,
+          MediaControl.play,
+          MediaControl.skipToNext,
+          MediaControl.stop,
+        ],
+        systemActions: const {
+          MediaAction.seek,
+          MediaAction.seekForward,
+          MediaAction.seekBackward,
+        },
+        processingState: AudioProcessingState.idle,
+        playing: false,
+        updatePosition: Duration.zero,
+      ),
+    );
+  }
+
+  /// Update playback state based on player state
+  void _updatePlaybackState(PlayerState state) {
+    playbackState.add(
+      playbackState.value.copyWith(
+        playing: state.isPlaying,
+        controls: [
+          MediaControl.skipToPrevious,
+          state.isPlaying ? MediaControl.pause : MediaControl.play,
+          MediaControl.skipToNext,
+          MediaControl.stop,
+          // Favorites placeholder (NO-OP for FASE 6)
+          const MediaControl(
+            androidIcon: 'drawable/ic_favorite_border',
+            label: 'Favorite',
+            action: MediaAction.custom,
+          ),
+        ],
+        systemActions: const {
+          MediaAction.seek,
+          MediaAction.seekForward,
+          MediaAction.seekBackward,
+        },
+        processingState: state.isPlaying
+            ? AudioProcessingState.ready
+            : AudioProcessingState.ready,
+        updatePosition: state.position,
+      ),
+    );
+  }
+
+  /// Update media item (notification metadata)
+  Future<void> _updateMediaItem(Song song) async {
+    // 1. Initial update without artwork (fast)
+    final baseMediaItem = MediaItem(
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      duration: song.duration != null
+          ? Duration(milliseconds: song.duration!)
+          : null,
+    );
+    mediaItem.add(baseMediaItem);
+
+    // 2. Secondary update with artwork (async)
+    // We fetch the URI (which might involve caching or content URIs)
+    final artUri = await _artworkService.getArtworkUri(song);
+
+    // Only update if the song is still the same one being played
+    if (artUri != null && mediaItem.value?.id == song.id) {
+      mediaItem.add(baseMediaItem.copyWith(artUri: artUri));
+    }
+  }
+
+  // ========== Media Controls ==========
+
+  @override
+  Future<void> play() async {
+    await audioPlayer.resume();
+  }
+
+  @override
+  Future<void> pause() async {
+    await audioPlayer.pause();
+  }
+
+  @override
+  Future<void> stop() async {
+    await audioPlayer.stop();
+
+    // Update state to stopped
+    playbackState.add(
+      playbackState.value.copyWith(
+        playing: false,
+        processingState: AudioProcessingState.idle,
+      ),
+    );
+
+    // This kills the foreground service and removes notification
+    await super.stop();
+  }
+
+  @override
+  Future<void> skipToNext() async {
+    await audioPlayer.skipToNext();
+  }
+
+  @override
+  Future<void> skipToPrevious() async {
+    await audioPlayer.skipToPrevious();
+  }
+
+  @override
+  Future<void> seek(Duration position) async {
+    await audioPlayer.seek(position);
+  }
+
+  // ========== Media Button Handling ==========
+
+  /// Override click to implement multi-tap detection for wired headphones
+  ///
+  /// Wired headphones with single button send multiple MEDIA_PLAY_PAUSE events.
+  /// This method implements a debounced multi-tap detector:
+  /// - 1 tap: Play/Pause
+  /// - 2 taps: Skip Next
+  /// - 3 taps: Skip Previous
+  ///
+  /// Bluetooth headphones send dedicated Next/Prev events which bypass this logic.
+  @override
+  Future<void> click([MediaButton button = MediaButton.media]) async {
+    if (button == MediaButton.media) {
+      // Multi-tap detection for wired headphones
+      _clickCount++;
+      _clickTimer?.cancel();
+
+      _clickTimer = Timer(const Duration(milliseconds: 500), () async {
+        if (_clickCount == 1) {
+          // Single tap: toggle play/pause
+          if (playbackState.value.playing) {
+            await pause();
+          } else {
+            await play();
+          }
+        } else if (_clickCount == 2) {
+          // Double tap: skip next
+          await skipToNext();
+        } else if (_clickCount >= 3) {
+          // Triple tap (or more): skip previous
+          await skipToPrevious();
+        }
+        _clickCount = 0;
+      });
+    } else {
+      // Bluetooth or dedicated buttons: use default behavior
+      await super.click(button);
+    }
+  }
+
+  // ========== Custom Actions ==========
+
+  @override
+  Future<void> customAction(String name, [Map<String, dynamic>? extras]) async {
+    switch (name) {
+      case 'toggleShuffle':
+        await audioPlayer.toggleShuffle();
+        break;
+      case 'setRepeatMode':
+        final modeIndex = extras?['mode'] as int?;
+        if (modeIndex != null) {
+          final mode = RepeatMode.values[modeIndex];
+          await audioPlayer.setRepeatMode(mode);
+        }
+        break;
+      case 'favorite':
+        // NO-OP placeholder for FASE 6
+        // Future implementation will handle favorites
+        break;
+    }
+  }
+
+  /// Play Next - move or insert song at currentIndex + 1 (FASE 7.2)
+  Future<void> playNext(Song song) async {
+    final currentIndex = audioPlayer.currentIndex;
+
+    if (currentIndex == null || audioPlayer.currentPlaylist.isEmpty) {
+      // No song playing, just play this song
+      await audioPlayer.setPlaylist([song], 0);
+      return;
+    }
+
+    // 1. Check if it's the current song
+    final currentSong = audioPlayer.getCurrentSong();
+    if (currentSong?.id == song.id) {
+      // Already playing, do nothing
+      return;
+    }
+
+    final currentQueue = List<Song>.from(audioPlayer.currentPlaylist);
+    final targetIndex = currentIndex + 1;
+
+    // 2. Check if the song is already in the queue
+    final existingIndex = currentQueue.indexWhere((s) => s.id == song.id);
+
+    if (existingIndex != -1) {
+      // Song exists, move it to target position
+      await audioPlayer.reorderQueue(existingIndex, targetIndex);
+    } else {
+      // Song doesn't exist, insert it
+      if (targetIndex <= currentQueue.length) {
+        currentQueue.insert(targetIndex, song);
+      } else {
+        currentQueue.add(song);
+      }
+      // Update queue without interrupting playback
+      await audioPlayer.updateQueue(currentQueue);
+    }
+  }
+
+  /// Play a specific song with playlist
+  Future<void> playSong(Song song, List<Song> playlist, int index) async {
+    await audioPlayer.setPlaylist(playlist, index);
+  }
+
+  /// Skip to index in current queue (FASE 7.2 optimization)
+  Future<void> skipToIndex(int index) async {
+    await audioPlayer.skipToIndex(index);
+  }
+
+  /// Dispose resources
+  @override
+  Future<void> onTaskRemoved() async {
+    // Don't stop audio when task is removed
+    // This allows audio to continue when app is swiped from Recents
+    // Audio will only stop when user explicitly stops it
+  }
+
+  void dispose() {
+    _clickTimer?.cancel();
+    _playerStateSubscription?.cancel();
+    _currentSongSubscription?.cancel();
+  }
+}

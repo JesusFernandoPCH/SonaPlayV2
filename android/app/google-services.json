@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "289431998577",
+    "project_id": "sonaplay-e7a32",
+    "storage_bucket": "sonaplay-e7a32.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289431998577:android:d630e34210e106f57e0bd0",
+        "android_client_info": {
+          "package_name": "com.JFPCH.sonaplay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfdrFbW06YQsEtjX_zPqZZfE_2aL6HrLc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289431998577:android:751c5a326e6d20f37e0bd0",
+        "android_client_info": {
+          "package_name": "com.example.sonaplay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfdrFbW06YQsEtjX_zPqZZfE_2aL6HrLc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
