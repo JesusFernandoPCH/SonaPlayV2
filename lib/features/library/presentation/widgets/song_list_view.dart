@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_tile.dart';
@@ -52,6 +53,10 @@ class _ListState extends ConsumerState<_List> {
   /// IDs checked in multi-select; empty means normal mode
   final _selected = <String>{};
 
+  /// Rows built right after the list appears slide in; later ones (scrolled
+  /// into view) just show
+  final _shownAt = DateTime.now();
+
   List<Song> get _songs => widget.songs;
 
   Future<void> _play(int index, {bool? shuffle}) async {
@@ -98,12 +103,18 @@ class _ListState extends ConsumerState<_List> {
                 if (i == headerCount - 1) return _header(context);
                 final index = i - headerCount;
                 final song = _songs[index];
-                return SongTile(
-                  song: song,
-                  isCurrent: song.id == currentId,
-                  checked: selecting ? _selected.contains(song.id) : null,
-                  onTap: selecting ? () => _toggle(song) : () => _play(index),
-                  onLongPress: () => _toggle(song),
+                return Entrance(
+                  key: ValueKey(song.id),
+                  delay: staggerDelay(index),
+                  animate:
+                      DateTime.now().difference(_shownAt) < Motion.slow * 2,
+                  child: SongTile(
+                    song: song,
+                    isCurrent: song.id == currentId,
+                    checked: selecting ? _selected.contains(song.id) : null,
+                    onTap: selecting ? () => _toggle(song) : () => _play(index),
+                    onLongPress: () => _toggle(song),
+                  ),
                 );
               },
             ),

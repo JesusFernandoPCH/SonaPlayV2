@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sonaplay/core/motion/motion.dart';
 
 /// What sits behind every screen
 enum BackgroundKind { color, gradient, image }
@@ -246,11 +247,10 @@ class _Layer extends StatelessWidget {
 }
 
 /// Wraps every page in the background, so pages stay opaque during
-/// transitions (no ghosting) while scaffolds themselves are transparent
+/// transitions (no ghosting) while scaffolds themselves are transparent,
+/// and moves them with the app's own shared-axis transition
 class BackdropPageTransitionsBuilder extends PageTransitionsBuilder {
   const BackdropPageTransitionsBuilder();
-
-  static const _inner = FadeForwardsPageTransitionsBuilder();
 
   @override
   Widget buildTransitions<T>(
@@ -259,11 +259,9 @@ class BackdropPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) => _inner.buildTransitions(
-    route,
-    context,
-    animation,
-    secondaryAnimation,
-    AppBackground(child: child),
+  ) => SharedAxisTransition(
+    animation: animation,
+    secondaryAnimation: secondaryAnimation,
+    child: AppBackground(child: child),
   );
 }

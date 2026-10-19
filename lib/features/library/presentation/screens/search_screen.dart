@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/features/library/domain/library_query.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
@@ -33,15 +34,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           onChanged: (text) => setState(() => _query = text),
         ),
       ),
-      body: _query.trim().isEmpty
-          ? const CenteredMessage(
-              'Escribe para buscar en tu biblioteca',
-              icon: Icons.search_rounded,
-            )
-          : SongListView(
-              songs: results,
-              emptyText: 'Sin resultados para "${_query.trim()}"',
-            ),
+      body: AnimatedSwitcher(
+        duration: Motion.medium,
+        child: _query.trim().isEmpty
+            ? const CenteredMessage(
+                'Escribe para buscar en tu biblioteca',
+                icon: Icons.search_rounded,
+              )
+            // New key per query: the results slide in again as you type
+            : SongListView(
+                key: ValueKey(_query.trim()),
+                songs: results,
+                emptyText: 'Sin resultados para "${_query.trim()}"',
+              ),
+      ),
       bottomNavigationBar: const MiniPlayer(),
     );
   }

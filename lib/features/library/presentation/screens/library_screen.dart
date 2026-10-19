@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/screens/folders_tab.dart';
 import 'package:sonaplay/features/library/presentation/screens/playlists_tab.dart';
@@ -88,7 +89,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         ),
       ),
       // Keeps each section's scroll position when switching
-      body: IndexedStack(
+      body: FadeThroughStack(
         index: _section,
         children: [
           SongListView(

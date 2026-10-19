@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/core/appearance/appearance.dart';
+import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
@@ -9,6 +11,101 @@ import 'package:sonaplay/features/player/domain/entities/player_state.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/equalizer_screen.dart';
 import 'package:sonaplay/features/player/presentation/screens/queue_screen.dart';
+
+/// The current song's artwork, flying between the mini player and the player
+/// (also while the player is dragged)
+class NowPlayingHero extends StatelessWidget {
+  final String songId;
+  final Widget child;
+  const NowPlayingHero({super.key, required this.songId, required this.child});
+
+  @override
+  Widget build(BuildContext context) => Hero(
+    tag: 'now-playing-artwork',
+    transitionOnUserGestures: true,
+    // Redrawn at the in-flight size, so the corners stay round as it grows
+    flightShuttleBuilder: (_, _, _, _, _) => LayoutBuilder(
+      builder: (context, box) =>
+          Artwork(songId: songId, size: box.maxWidth, large: true),
+    ),
+    child: child,
+  );
+}
+
+/// Rises from the bottom. While dragged, the finger drives the route's own
+/// animation, and on release a spring finishes the move at the finger's speed
+/// (the same approach as the iOS back swipe).
+class PlayerRoute extends PageRoute<void> {
+  PlayerRoute();
+
+  @override
+  Color? get barrierColor => null;
+  @override
+  String? get barrierLabel => null;
+  // ponytail: the page below is composited the whole time the player is open;
+  // flip the overlay entry to opaque between drags if that ever costs frames
+  @override
+  bool get opaque => false;
+  @override
+  bool get maintainState => true;
+  @override
+  Duration get transitionDuration => Motion.slow;
+  @override
+  Duration get reverseTransitionDuration => Motion.medium;
+
+  @override
+  Widget buildPage(context, animation, secondaryAnimation) =>
+      const PlayerScreen();
+
+  @override
+  Widget buildTransitions(context, animation, secondaryAnimation, child) =>
+      ValueListenableBuilder(
+        valueListenable: navigator!.userGestureInProgressNotifier,
+        builder: (context, dragging, child) => SlideTransition(
+          position: Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
+            // Linear while dragging, so the page stays under the finger
+            dragging
+                ? animation
+                : CurvedAnimation(
+                    parent: animation,
+                    curve: Motion.enter,
+                    reverseCurve: Curves.easeInCubic,
+                  ),
+          ),
+          child: child,
+        ),
+        child: child,
+      );
+
+  void dragStart() => navigator!.didStartUserGesture();
+
+  /// [fraction] of the screen height moved down
+  void dragUpdate(double fraction) => controller!.value -= fraction;
+
+  /// [velocity] in screen heights per second, positive downwards
+  void dragEnd(double velocity) {
+    final controller = this.controller!;
+    final close = velocity > 1.2 || (velocity > -1.2 && controller.value < 0.7);
+    if (close) {
+      navigator!.pop();
+      // Replaces pop's default reverse with a spring at the finger's speed
+      controller.fling(velocity: -velocity.clamp(1.5, 8.0));
+    } else {
+      controller.fling(velocity: (-velocity).clamp(1.5, 8.0));
+    }
+    if (controller.isAnimating) {
+      late final AnimationStatusListener done;
+      done = (status) {
+        if (status.isAnimating) return;
+        navigator?.didStopUserGesture();
+        controller.removeStatusListener(done);
+      };
+      controller.addStatusListener(done);
+    } else {
+      navigator!.didStopUserGesture();
+    }
+  }
+}
 
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
@@ -45,13 +142,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // Shows while the artwork loads or when there is none (the route
+          // is see-through so the page below can show while dragging)
+          const AppBackground(child: SizedBox.expand()),
           _ArtworkBackdrop(songId: song.id),
           SafeArea(
             child: GestureDetector(
-              // Swipe down anywhere to close, like dismissing a sheet
-              onVerticalDragEnd: (d) {
-                if ((d.primaryVelocity ?? 0) > 400) Navigator.pop(context);
-              },
+              // Drag down anywhere: the player follows the finger
+              onVerticalDragStart: (_) => _route?.dragStart(),
+              onVerticalDragUpdate: (d) =>
+                  _route?.dragUpdate(d.primaryDelta! / context.size!.height),
+              onVerticalDragEnd: (d) =>
+                  _route?.dragEnd(d.primaryVelocity! / context.size!.height),
+              onVerticalDragCancel: () => _route?.dragEnd(0),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
@@ -94,28 +197,31 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                           builder: (context, box) {
                             final size = min(box.maxWidth, box.maxHeight - 32);
                             return Center(
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 350),
-                                child: DecoratedBox(
-                                  key: ValueKey(song.id),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(
-                                      size * 0.16,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: scheme.primary.withValues(
-                                          alpha: 0.35,
-                                        ),
-                                        blurRadius: 48,
-                                        offset: const Offset(0, 16),
+                              child: NowPlayingHero(
+                                songId: song.id,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 350),
+                                  child: DecoratedBox(
+                                    key: ValueKey(song.id),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(
+                                        size * 0.16,
                                       ),
-                                    ],
-                                  ),
-                                  child: Artwork(
-                                    songId: song.id,
-                                    size: size,
-                                    large: true,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: scheme.primary.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          blurRadius: 48,
+                                          offset: const Offset(0, 16),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Artwork(
+                                      songId: song.id,
+                                      size: size,
+                                      large: true,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -302,6 +408,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       ),
     );
   }
+
+  PlayerRoute? get _route => ModalRoute.of(context) as PlayerRoute?;
 
   void _open(Widget screen) =>
       Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
