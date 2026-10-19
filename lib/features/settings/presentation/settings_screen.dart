@@ -11,6 +11,7 @@ import 'package:sonaplay/features/library/presentation/widgets/song_list_view.da
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/settings/data/datasources/settings_local_datasource.dart';
 import 'package:sonaplay/features/settings/presentation/appearance_screen.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -78,29 +79,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           header('Personalización'),
           ListTile(
-            leading: const Icon(Icons.palette_outlined),
+            leading: const AppIcon(AppIcons.palette),
             title: const Text('Apariencia'),
             subtitle: const Text('Fondo, difuminado y color de acento'),
-            trailing: const Icon(Icons.chevron_right_rounded),
+            trailing: const AppIcon(AppIcons.chevronRight),
             onTap: () => open(const AppearanceScreen()),
           ),
           header('Biblioteca'),
           ListTile(
-            leading: const Icon(Icons.visibility_off_rounded),
+            leading: const AppIcon(AppIcons.hide),
             title: const Text('Archivos ocultos'),
             subtitle: Text(hidden == 1 ? '1 canción' : '$hidden canciones'),
-            trailing: const Icon(Icons.chevron_right_rounded),
+            trailing: const AppIcon(AppIcons.chevronRight),
             onTap: () => open(const _HiddenSongsScreen()),
           ),
           ListTile(
-            leading: const Icon(Icons.delete_outline_rounded),
+            leading: const AppIcon(AppIcons.delete),
             title: const Text('Eliminado recientemente'),
             subtitle: Text(trashed == 1 ? '1 canción' : '$trashed canciones'),
-            trailing: const Icon(Icons.chevron_right_rounded),
+            trailing: const AppIcon(AppIcons.chevronRight),
             onTap: () => open(const _TrashScreen()),
           ),
           ListTile(
-            leading: const Icon(Icons.timer_outlined),
+            leading: const AppIcon(AppIcons.timer),
             title: const Text('Duración mínima'),
             subtitle: Text(
               minDuration == 0
@@ -113,7 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           FutureBuilder(
             future: PackageInfo.fromPlatform(),
             builder: (context, snap) => ListTile(
-              leading: const Icon(Icons.info_outline_rounded),
+              leading: const AppIcon(AppIcons.info),
               title: const Text('SonaPlay'),
               subtitle: Text(
                 snap.hasData ? 'Versión ${snap.data!.version}' : '',
@@ -146,7 +147,7 @@ class _HiddenSongsScreen extends ConsumerWidget {
       body: songs.isEmpty
           ? const CenteredMessage(
               'No hay canciones ocultas',
-              icon: Icons.visibility_rounded,
+              icon: AppIcons.show,
             )
           : ListView(
               children: [
@@ -236,7 +237,7 @@ class _TrashScreen extends ConsumerWidget {
       body: songs.isEmpty
           ? const CenteredMessage(
               'La papelera está vacía',
-              icon: Icons.delete_outline_rounded,
+              icon: AppIcons.delete,
             )
           : ListView(
               children: [

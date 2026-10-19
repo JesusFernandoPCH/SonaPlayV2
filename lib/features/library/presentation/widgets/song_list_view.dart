@@ -10,6 +10,7 @@ import 'package:sonaplay/features/library/presentation/screens/selection_screen.
 import 'package:sonaplay/features/library/presentation/widgets/song_tile.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/player_route.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Song list with a "count · Reproducir · Aleatorio" header; handles loading,
 /// error and empty states. Used by every tab and detail screen.
@@ -165,14 +166,14 @@ class _ListState extends ConsumerState<_List> {
         ),
         FilledButton.icon(
           onPressed: () => _play(0, shuffle: false),
-          icon: const Icon(Icons.play_arrow_rounded),
+          icon: const AppIcon(AppIcons.play, filled: true),
           label: const Text('Reproducir'),
         ),
         const SizedBox(width: 8),
         OutlinedButton.icon(
           onPressed: () =>
               _play(Random().nextInt(_songs.length), shuffle: true),
-          icon: const Icon(Icons.shuffle_rounded),
+          icon: const AppIcon(AppIcons.shuffle),
           label: const Text('Aleatorio'),
         ),
       ],
@@ -182,7 +183,7 @@ class _ListState extends ConsumerState<_List> {
 
 class CenteredMessage extends StatelessWidget {
   final String text;
-  final IconData? icon;
+  final AppIconData? icon;
   const CenteredMessage(this.text, {super.key, this.icon});
 
   @override
@@ -192,8 +193,8 @@ class CenteredMessage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(
+          if (icon case final icon?) ...[
+            AppIcon(
               icon,
               size: 48,
               color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Rounded square artwork of a song, with a note icon when it has none
 class Artwork extends ConsumerWidget {
@@ -36,8 +37,8 @@ class Artwork extends ConsumerWidget {
             ? Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true)
             : ColoredBox(
                 color: scheme.surfaceContainerHighest,
-                child: Icon(
-                  Icons.music_note_rounded,
+                child: AppIcon(
+                  AppIcons.music,
                   size: size * 0.45,
                   color: scheme.onSurfaceVariant,
                 ),

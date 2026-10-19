@@ -12,6 +12,7 @@ import 'package:sonaplay/features/player/presentation/player_route.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/equalizer_screen.dart';
 import 'package:sonaplay/features/player/presentation/widgets/queue_list.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
@@ -111,9 +112,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                           children: [
                             IconButton(
                               tooltip: 'Cerrar',
-                              icon: const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                              ),
+                              icon: const AppIcon(AppIcons.collapse),
                               iconSize: 32,
                               onPressed: () => Navigator.pop(context),
                             ),
@@ -130,7 +129,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                             ),
                             IconButton(
                               tooltip: 'Opciones de la canción',
-                              icon: const Icon(Icons.more_vert_rounded),
+                              icon: const AppIcon(AppIcons.more),
                               onPressed: () => showSongOptions(context, song),
                             ),
                           ],
@@ -175,13 +174,16 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                               tooltip: state.isShuffled
                                   ? 'Aleatorio activado'
                                   : 'Aleatorio desactivado',
-                              icon: Icons.shuffle_rounded,
+                              icon: AppIcons.shuffle,
                               onPressed: player.toggleShuffle,
                             ),
                             IconButton(
                               tooltip: 'Anterior',
                               iconSize: 40,
-                              icon: const Icon(Icons.skip_previous_rounded),
+                              icon: const AppIcon(
+                                AppIcons.previous,
+                                filled: true,
+                              ),
                               onPressed: player.skipToPrevious,
                             ),
                             SizedBox.square(
@@ -199,10 +201,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                                     ),
                                   ),
                                 ),
-                                icon: Icon(
+                                icon: SwapIcon(
                                   state.isPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
+                                      ? AppIcons.pause
+                                      : AppIcons.play,
+                                  filled: true,
                                 ),
                                 onPressed: state.isPlaying
                                     ? player.pause
@@ -212,7 +215,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                             IconButton(
                               tooltip: 'Siguiente',
                               iconSize: 40,
-                              icon: const Icon(Icons.skip_next_rounded),
+                              icon: const AppIcon(AppIcons.next, filled: true),
                               onPressed: player.skipToNext,
                             ),
                             _ModeButton(
@@ -223,8 +226,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                                 RepeatMode.off => 'Repetir desactivado',
                               },
                               icon: state.repeatMode == RepeatMode.one
-                                  ? Icons.repeat_one_rounded
-                                  : Icons.repeat_rounded,
+                                  ? AppIcons.repeatOne
+                                  : AppIcons.repeat,
                               onPressed: () => player.setRepeatMode(
                                 switch (state.repeatMode) {
                                   RepeatMode.all => RepeatMode.one,
@@ -240,12 +243,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _BottomAction(
-                              icon: Icons.equalizer_rounded,
+                              icon: AppIcons.equalizer,
                               label: 'Ecualizador',
                               onPressed: () => _open(const EqualizerScreen()),
                             ),
                             _BottomAction(
-                              icon: Icons.bedtime_outlined,
+                              icon: AppIcons.sleep,
                               label: sleepEnds == null
                                   ? 'Temporizador'
                                   : TimeOfDay.fromDateTime(sleepEnds)
@@ -260,7 +263,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                               ),
                             ),
                             _BottomAction(
-                              icon: Icons.queue_music_rounded,
+                              icon: AppIcons.queue,
                               label: 'Cola',
                               onPressed: () => _showQueue(true),
                             ),
@@ -374,7 +377,7 @@ class _ArtworkBackdrop extends ConsumerWidget {
 }
 
 class _BottomAction extends StatelessWidget {
-  final IconData icon;
+  final AppIconData icon;
   final String label;
   final VoidCallback onPressed;
   final bool active;
@@ -394,7 +397,7 @@ class _BottomAction extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: active ? scheme.primary : scheme.onSurfaceVariant,
       ),
-      icon: Icon(icon, size: 20),
+      icon: AppIcon(icon, size: 20),
       label: Text(label),
     );
   }
@@ -405,7 +408,7 @@ class _BottomAction extends StatelessWidget {
 class _ModeButton extends StatelessWidget {
   final bool active;
   final String tooltip;
-  final IconData icon;
+  final AppIconData icon;
   final VoidCallback onPressed;
 
   const _ModeButton({
@@ -417,18 +420,33 @@ class _ModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return active
-        ? IconButton.filledTonal(
-            tooltip: tooltip,
-            icon: Icon(icon),
-            onPressed: onPressed,
-          )
-        : IconButton(
-            tooltip: tooltip,
-            icon: Icon(icon),
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            onPressed: onPressed,
-          );
+    final scheme = Theme.of(context).colorScheme;
+    // One button whose background fades in, and whose icon spins once as it
+    // turns on (and swaps with a pop, e.g. repeat to repeat-one)
+    return IconButton(
+      tooltip: tooltip,
+      isSelected: active,
+      onPressed: onPressed,
+      style: ButtonStyle(
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.onSecondaryContainer
+              : scheme.onSurfaceVariant,
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.secondaryContainer
+              : Colors.transparent,
+        ),
+        animationDuration: Motion.medium,
+      ),
+      icon: AnimatedRotation(
+        turns: active ? 1 : 0,
+        duration: Motion.slow,
+        curve: Motion.settle,
+        child: SwapIcon(icon),
+      ),
+    );
   }
 }
 
@@ -477,14 +495,15 @@ class _CollapsedPlayer extends ConsumerWidget {
             ),
             IconButton.filled(
               tooltip: isPlaying ? 'Pausar' : 'Reproducir',
-              icon: Icon(
-                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              icon: SwapIcon(
+                isPlaying ? AppIcons.pause : AppIcons.play,
+                filled: true,
               ),
               onPressed: isPlaying ? player.pause : player.resume,
             ),
             IconButton(
               tooltip: 'Volver al reproductor',
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              icon: const AppIcon(AppIcons.collapse),
               onPressed: onExpand,
             ),
           ],
@@ -587,7 +606,13 @@ class _SongCarouselState extends ConsumerState<_SongCarousel> {
     final player = ref.watch(audioHandlerProvider).audioPlayer;
     final queue = player.currentPlaylist;
     final current = player.currentIndex;
-    ref.listen(currentSongProvider, (_, _) => _follow(player.currentIndex));
+    // Track the playing song's position, which also moves when the queue
+    // changes under it (shuffle, reorder); never while the user is swiping
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pages.hasClients) return;
+      if (_pages.position.isScrollingNotifier.value) return;
+      _follow(player.currentIndex);
+    });
     final favorites = ref.watch(favoriteIdsProvider).value ?? const {};
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
@@ -695,10 +720,10 @@ class _SongCarouselState extends ConsumerState<_SongCarousel> {
                                 ? 'Quitar de favoritos'
                                 : 'Agregar a favoritos',
                             iconSize: 28,
-                            icon: Icon(
-                              isFavorite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
+                            // Pops in filled when added
+                            icon: SwapIcon(
+                              AppIcons.favorite,
+                              filled: isFavorite,
                               color: isFavorite ? scheme.primary : null,
                             ),
                             onPressed: () {

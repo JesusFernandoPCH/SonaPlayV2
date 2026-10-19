@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 const _rowHeight = 72.0;
 
@@ -60,7 +61,7 @@ class _QueueListState extends ConsumerState<QueueList> {
           ),
           trailing: ReorderableDragStartListener(
             index: i,
-            child: const Icon(Icons.drag_handle_rounded),
+            child: const AppIcon(AppIcons.drag),
           ),
           onTap: () => player.skipToIndex(i),
         );

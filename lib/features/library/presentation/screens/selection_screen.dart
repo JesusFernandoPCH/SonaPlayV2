@@ -5,6 +5,7 @@ import 'package:sonaplay/core/theme/app_theme.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 const _rowHeight = 72.0;
 
@@ -64,7 +65,7 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Cerrar',
-          icon: const Icon(Icons.close_rounded),
+          icon: const AppIcon(AppIcons.close),
           onPressed: () => Navigator.pop(context),
         ),
         title: AnimatedSwitcher(
@@ -129,13 +130,13 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
               child: _Dock(
                 actions: [
                   (
-                    Icons.playlist_add_rounded,
+                    AppIcons.playlistAdd,
                     'Agregar a',
                     () =>
                         _run((s) => addSongsToPlaylist(context, container, s)),
                   ),
                   (
-                    Icons.queue_play_next_rounded,
+                    AppIcons.playNext,
                     'A continuación',
                     () => _run((s) async {
                       await playSongsNext(context, container, s);
@@ -143,7 +144,7 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
                     }),
                   ),
                   (
-                    Icons.share_rounded,
+                    AppIcons.share,
                     'Compartir',
                     () => _run((s) async {
                       await shareSongs(s);
@@ -151,7 +152,7 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
                     }),
                   ),
                   (
-                    Icons.visibility_off_rounded,
+                    AppIcons.hide,
                     'Ocultar',
                     () => _run((s) async {
                       await hideSongs(context, s);
@@ -159,7 +160,7 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
                     }),
                   ),
                   (
-                    Icons.delete_outline_rounded,
+                    AppIcons.delete,
                     'Eliminar',
                     () => _run((s) => trashSongs(context, s)),
                   ),
@@ -266,7 +267,7 @@ class _Check extends StatelessWidget {
           scale: checked ? 1 : 0,
           duration: Motion.medium,
           curve: Motion.settle,
-          child: Icon(Icons.check_rounded, size: 18, color: scheme.onPrimary),
+          child: AppIcon(AppIcons.check, size: 18, color: scheme.onPrimary),
         ),
       ),
     );
@@ -274,7 +275,7 @@ class _Check extends StatelessWidget {
 }
 
 class _Dock extends StatelessWidget {
-  final List<(IconData, String, VoidCallback)> actions;
+  final List<(AppIconData, String, VoidCallback)> actions;
   const _Dock({required this.actions});
 
   @override
@@ -307,7 +308,7 @@ class _Dock extends StatelessWidget {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(icon),
+                              AppIcon(icon),
                               const SizedBox(height: 4),
                               Text(
                                 label,

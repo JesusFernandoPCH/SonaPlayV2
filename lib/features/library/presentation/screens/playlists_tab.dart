@@ -8,6 +8,7 @@ import 'package:sonaplay/features/library/presentation/providers/library_provide
 import 'package:sonaplay/features/library/presentation/widgets/playlist_cover.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class PlaylistsTab extends ConsumerWidget {
   const PlaylistsTab({super.key});
@@ -18,7 +19,7 @@ class PlaylistsTab extends ConsumerWidget {
     return ListView(
       children: [
         ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.add_rounded)),
+          leading: const CircleAvatar(child: AppIcon(AppIcons.add)),
           title: const Text('Nueva playlist'),
           onTap: () => createPlaylistFlow(
             context,
@@ -28,7 +29,7 @@ class PlaylistsTab extends ConsumerWidget {
         if (playlists.isEmpty)
           const CenteredMessage(
             'Aún no tienes playlists',
-            icon: Icons.queue_music_rounded,
+            icon: AppIcons.queue,
           ),
         for (final playlist in playlists) _PlaylistTile(playlist: playlist),
       ],

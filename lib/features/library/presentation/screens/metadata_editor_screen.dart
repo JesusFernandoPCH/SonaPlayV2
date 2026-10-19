@@ -8,6 +8,7 @@ import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Edits title, artist, album and artwork. Changes stay inside the app;
 /// the audio file is never modified.
@@ -118,7 +119,7 @@ class _MetadataEditorScreenState extends ConsumerState<MetadataEditorScreen> {
           Center(
             child: TextButton.icon(
               onPressed: _pickArtwork,
-              icon: const Icon(Icons.image_rounded),
+              icon: const AppIcon(AppIcons.image),
               label: const Text('Cambiar carátula'),
             ),
           ),

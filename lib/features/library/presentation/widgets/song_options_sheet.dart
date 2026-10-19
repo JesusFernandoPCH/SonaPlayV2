@@ -11,6 +11,7 @@ import 'package:sonaplay/features/library/presentation/screens/playlists_tab.dar
 import 'package:sonaplay/features/library/presentation/screens/ringtone_trimmer_screen.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Bottom sheet with every action for one song
 void showSongOptions(BuildContext context, Song song) {
@@ -42,12 +43,12 @@ class _SongOptions extends ConsumerWidget {
     void close() => Navigator.pop(context);
 
     Widget item(
-      IconData icon,
+      AppIconData icon,
       String label,
       VoidCallback onTap, {
       String? detail,
     }) => ListTile(
-      leading: Icon(icon),
+      leading: AppIcon(icon),
       title: Text(label),
       subtitle: detail == null ? null : Text(detail),
       onTap: onTap,
@@ -75,24 +76,24 @@ class _SongOptions extends ConsumerWidget {
               ),
             ),
             const Divider(),
-            item(Icons.playlist_play_rounded, 'Reproducir a continuación', () {
+            item(AppIcons.playNext, 'Reproducir a continuación', () {
               close();
               playSongsNext(host, container, songs);
             }),
-            item(Icons.playlist_add_rounded, 'Agregar a playlist', () {
+            item(AppIcons.playlistAdd, 'Agregar a playlist', () {
               close();
               addSongsToPlaylist(host, container, songs);
             }),
-            item(Icons.share_rounded, 'Compartir', () {
+            item(AppIcons.share, 'Compartir', () {
               close();
               shareSongs(songs);
             }),
-            item(Icons.speed_rounded, 'Velocidad', () {
+            item(AppIcons.speed, 'Velocidad', () {
               close();
               _pickSpeed(host, container);
             }, detail: '${handler.audioPlayer.speed}x'),
             item(
-              Icons.bedtime_rounded,
+              AppIcons.sleep,
               'Temporizador para dormir',
               () {
                 close();
@@ -102,19 +103,19 @@ class _SongOptions extends ConsumerWidget {
                   ? null
                   : 'Pausa a las ${TimeOfDay.fromDateTime(sleepEnds).format(context)}',
             ),
-            item(Icons.ring_volume_rounded, 'Usar como tono de llamada', () {
+            item(AppIcons.ringtone, 'Usar como tono de llamada', () {
               close();
               open(RingtoneTrimmerScreen(song: song));
             }),
-            item(Icons.edit_rounded, 'Editar información', () {
+            item(AppIcons.edit, 'Editar información', () {
               close();
               open(MetadataEditorScreen(song: song));
             }),
-            item(Icons.visibility_off_rounded, 'Ocultar', () {
+            item(AppIcons.hide, 'Ocultar', () {
               close();
               hideSongs(host, songs);
             }),
-            item(Icons.delete_outline_rounded, 'Eliminar', () {
+            item(AppIcons.delete, 'Eliminar', () {
               close();
               trashSongs(host, songs);
             }),
@@ -252,7 +253,7 @@ Future<bool> addSongsToPlaylist(
         shrinkWrap: true,
         children: [
           ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.add_rounded)),
+            leading: const CircleAvatar(child: AppIcon(AppIcons.add)),
             title: const Text('Nueva playlist'),
             onTap: () async {
               final created = await createPlaylistFlow(
@@ -264,7 +265,7 @@ Future<bool> addSongsToPlaylist(
           ),
           for (final p in playlists)
             ListTile(
-              leading: const Icon(Icons.queue_music_rounded),
+              leading: const AppIcon(AppIcons.queue),
               title: Text(p.name),
               onTap: () => Navigator.pop(sheetContext, p),
             ),

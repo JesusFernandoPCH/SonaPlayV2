@@ -3,6 +3,7 @@ import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class SongTile extends StatelessWidget {
   final Song song;
@@ -44,7 +45,7 @@ class SongTile extends StatelessWidget {
         // The playing song is marked by the accent color (selected)
         trailing: IconButton(
           tooltip: 'Opciones de ${song.title}',
-          icon: const Icon(Icons.more_vert_rounded),
+          icon: const AppIcon(AppIcons.more),
           onPressed: () => showSongOptions(context, song),
         ),
       ),
@@ -97,8 +98,8 @@ class SongGridTile extends StatelessWidget {
                             child: CircleAvatar(
                               radius: 14,
                               backgroundColor: scheme.primary,
-                              child: Icon(
-                                Icons.graphic_eq_rounded,
+                              child: AppIcon(
+                                AppIcons.nowPlaying,
                                 size: 18,
                                 color: scheme.onPrimary,
                                 semanticLabel: 'Sonando',
@@ -144,7 +145,7 @@ class SongGridTile extends StatelessWidget {
                         tooltip: 'Opciones de ${song.title}',
                         padding: EdgeInsets.zero,
                         iconSize: 20,
-                        icon: const Icon(Icons.more_vert_rounded),
+                        icon: const AppIcon(AppIcons.more),
                         onPressed: () => showSongOptions(context, song),
                       ),
                     ),

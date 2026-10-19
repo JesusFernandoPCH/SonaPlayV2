@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/core/services/permission_service.dart';
 import 'package:sonaplay/features/library/presentation/screens/library_screen.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 final _permissionService = PermissionService();
 
@@ -69,8 +70,8 @@ class _PermissionScreenState extends ConsumerState<_PermissionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(
-                Icons.library_music_rounded,
+              AppIcon(
+                AppIcons.library,
                 size: 72,
                 color: Theme.of(context).colorScheme.primary,
               ),

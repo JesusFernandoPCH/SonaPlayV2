@@ -5,6 +5,7 @@ import 'package:sonaplay/core/theme/app_theme.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/player_route.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Size and corner of the card, which the player morphs into when it closes
 const kMiniPlayerRadius = 18.0;
@@ -132,19 +133,20 @@ class MiniPlayerContent extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: 'Anterior',
-                icon: const Icon(Icons.skip_previous_rounded),
+                icon: const AppIcon(AppIcons.previous, filled: true),
                 onPressed: player.skipToPrevious,
               ),
               IconButton.filled(
                 tooltip: isPlaying ? 'Pausar' : 'Reproducir',
-                icon: Icon(
-                  isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                icon: SwapIcon(
+                  isPlaying ? AppIcons.pause : AppIcons.play,
+                  filled: true,
                 ),
                 onPressed: isPlaying ? player.pause : player.resume,
               ),
               IconButton(
                 tooltip: 'Siguiente',
-                icon: const Icon(Icons.skip_next_rounded),
+                icon: const AppIcon(AppIcons.next, filled: true),
                 onPressed: player.skipToNext,
               ),
             ],

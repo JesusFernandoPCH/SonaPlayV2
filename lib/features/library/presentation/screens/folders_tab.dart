@@ -6,6 +6,7 @@ import 'package:sonaplay/features/library/presentation/providers/library_provide
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class FoldersTab extends ConsumerWidget {
   const FoldersTab({super.key});
@@ -15,7 +16,7 @@ class FoldersTab extends ConsumerWidget {
     return switch (ref.watch(foldersProvider)) {
       AsyncData(:final value) when value.isEmpty => const CenteredMessage(
         'No hay carpetas con música',
-        icon: Icons.folder_off_rounded,
+        icon: AppIcons.folderOff,
       ),
       AsyncData(:final value) => ListView.builder(
         itemCount: value.length,
@@ -42,7 +43,7 @@ class _FolderTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      trailing: const AppIcon(AppIcons.chevronRight),
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute<void>(

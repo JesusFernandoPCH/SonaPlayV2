@@ -9,28 +9,13 @@ import 'package:sonaplay/features/library/presentation/widgets/library_sheets.da
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
 import 'package:sonaplay/features/settings/presentation/settings_screen.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 const _sections = [
-  (
-    label: 'Canciones',
-    icon: Icons.music_note_outlined,
-    selected: Icons.music_note_rounded,
-  ),
-  (
-    label: 'Playlists',
-    icon: Icons.queue_music_outlined,
-    selected: Icons.queue_music_rounded,
-  ),
-  (
-    label: 'Favoritas',
-    icon: Icons.favorite_border_rounded,
-    selected: Icons.favorite_rounded,
-  ),
-  (
-    label: 'Carpetas',
-    icon: Icons.folder_outlined,
-    selected: Icons.folder_rounded,
-  ),
+  (label: 'Canciones', icon: AppIcons.music, selected: AppIcons.music),
+  (label: 'Playlists', icon: AppIcons.playlist, selected: AppIcons.queue),
+  (label: 'Favoritas', icon: AppIcons.favorite, selected: AppIcons.favorite),
+  (label: 'Carpetas', icon: AppIcons.folder, selected: AppIcons.folder),
 ];
 
 /// Home: the four library sections behind a bottom navigation bar
@@ -75,20 +60,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           if (onSongs) ...[
             IconButton(
               tooltip: 'Ordenar',
-              icon: const Icon(Icons.sort_rounded),
+              icon: const AppIcon(AppIcons.sort),
               onPressed: () => showSortSheet(context),
             ),
             IconButton(
               tooltip: filtered ? 'Filtros activos' : 'Filtrar',
               isSelected: filtered,
-              icon: const Icon(Icons.filter_list_rounded),
-              selectedIcon: const Icon(Icons.filter_alt_rounded),
+              icon: const AppIcon(AppIcons.filter),
+              selectedIcon: const AppIcon(AppIcons.filter),
               onPressed: () => showFilterSheet(context),
             ),
           ],
           IconButton(
             tooltip: 'Ajustes',
-            icon: const Icon(Icons.settings_outlined),
+            icon: const AppIcon(AppIcons.settings),
             onPressed: () => _open(const SettingsScreen()),
           ),
           const SizedBox(width: 4),
@@ -132,8 +117,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             destinations: [
               for (final s in _sections)
                 NavigationDestination(
-                  icon: Icon(s.icon),
-                  selectedIcon: Icon(s.selected),
+                  icon: AppIcon(s.icon),
+                  selectedIcon: AppIcon(s.selected),
                   label: s.label,
                 ),
             ],
@@ -165,7 +150,7 @@ class _SearchPill extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 18),
-                Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
+                AppIcon(AppIcons.search, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 12),
                 Text(
                   'Buscar canciones, artistas o álbumes',

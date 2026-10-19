@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/library/domain/entities/sort_option.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 const _sortFields = [
   ('Título', SortOption.titleAsc, SortOption.titleDesc),
@@ -29,17 +30,17 @@ void showSortSheet(BuildContext context) => showModalBottomSheet<void>(
                 segments: const [
                   ButtonSegment(
                     value: LibraryView.compact,
-                    icon: Icon(Icons.view_headline_rounded),
+                    icon: AppIcon(AppIcons.viewCompact),
                     label: Text('Compacta'),
                   ),
                   ButtonSegment(
                     value: LibraryView.normal,
-                    icon: Icon(Icons.view_list_rounded),
+                    icon: AppIcon(AppIcons.viewList),
                     label: Text('Normal'),
                   ),
                   ButtonSegment(
                     value: LibraryView.grid,
-                    icon: Icon(Icons.grid_view_rounded),
+                    icon: AppIcon(AppIcons.viewGrid),
                     label: Text('Cuadrícula'),
                   ),
                 ],
@@ -54,13 +55,13 @@ void showSortSheet(BuildContext context) => showModalBottomSheet<void>(
                 title: Text(label),
                 selected: current == asc || current == desc,
                 trailing: current == asc
-                    ? const Icon(
-                        Icons.arrow_upward_rounded,
+                    ? const AppIcon(
+                        AppIcons.sortUp,
                         semanticLabel: 'Ascendente',
                       )
                     : current == desc
-                    ? const Icon(
-                        Icons.arrow_downward_rounded,
+                    ? const AppIcon(
+                        AppIcons.sortDown,
                         semanticLabel: 'Descendente',
                       )
                     : null,
@@ -97,10 +98,10 @@ void showFilterSheet(BuildContext context) => showModalBottomSheet<void>(
         title: Text(label),
         subtitle: Text(selected ?? 'Todos'),
         trailing: selected == null
-            ? const Icon(Icons.chevron_right_rounded)
+            ? const AppIcon(AppIcons.chevronRight)
             : IconButton(
                 tooltip: 'Quitar filtro de ${label.toLowerCase()}',
-                icon: const Icon(Icons.close_rounded),
+                icon: const AppIcon(AppIcons.close),
                 onPressed: () => onSelected(null),
               ),
         onTap: () async {

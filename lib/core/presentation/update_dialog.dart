@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sonaplay/core/services/update_service.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Fetches Remote Config and, when this version is below min_version_required,
 /// blocks the app with a dialog that sends the user to the store
@@ -15,7 +16,7 @@ Future<void> checkForRequiredUpdate(GlobalKey<NavigatorState> navigator) async {
     builder: (_) => PopScope(
       canPop: false,
       child: AlertDialog(
-        icon: const Icon(Icons.system_update_rounded),
+        icon: const AppIcon(AppIcons.update),
         title: const Text('Actualización necesaria'),
         content: const Text(
           'Esta versión de SonaPlay ya no es compatible. '

@@ -5,6 +5,7 @@ import 'package:sonaplay/features/library/domain/library_query.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -39,7 +40,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: _query.trim().isEmpty
             ? const CenteredMessage(
                 'Escribe para buscar en tu biblioteca',
-                icon: Icons.search_rounded,
+                icon: AppIcons.search,
               )
             // New key per query: the results slide in again as you type
             : SongListView(

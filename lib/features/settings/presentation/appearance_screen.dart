@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sonaplay/core/appearance/appearance.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});
@@ -106,8 +107,8 @@ class AppearanceScreen extends ConsumerWidget {
                     color: theme.colorScheme.surfaceContainerHighest,
                   ),
                   onTap: pickFromGallery,
-                  child: Icon(
-                    Icons.add_photo_alternate_outlined,
+                  child: AppIcon(
+                    AppIcons.imageAdd,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -116,7 +117,7 @@ class AppearanceScreen extends ConsumerWidget {
           ),
           if (a.kind == BackgroundKind.image) ...[
             _SliderTile(
-              icon: Icons.blur_on_rounded,
+              icon: AppIcons.blur,
               label: 'Difuminado',
               value: a.blur,
               max: 30,
@@ -124,7 +125,7 @@ class AppearanceScreen extends ConsumerWidget {
               onChanged: (v) => notifier.update((a) => a.copyWith(blur: v)),
             ),
             _SliderTile(
-              icon: Icons.brightness_6_rounded,
+              icon: AppIcons.dim,
               label: 'Oscurecer',
               value: a.dim,
               max: 0.8,
@@ -133,7 +134,7 @@ class AppearanceScreen extends ConsumerWidget {
             ),
             if (a.isGif)
               const ListTile(
-                leading: Icon(Icons.battery_alert_rounded),
+                leading: AppIcon(AppIcons.battery),
                 subtitle: Text(
                   'Los GIF animados gastan un poco más de batería. '
                   'Se pausan cuando la app no está en pantalla.',
@@ -250,8 +251,8 @@ class _Preview extends StatelessWidget {
                       child: CircleAvatar(
                         radius: 12,
                         backgroundColor: scheme.primary,
-                        child: Icon(
-                          Icons.pause_rounded,
+                        child: AppIcon(
+                          AppIcons.pause,
                           size: 16,
                           color: scheme.onPrimary,
                         ),
@@ -316,7 +317,7 @@ class _Swatch extends StatelessWidget {
                 child:
                     child ??
                     (selected
-                        ? const Icon(Icons.check_rounded, color: Colors.white)
+                        ? const AppIcon(AppIcons.check, color: Colors.white)
                         : null),
               ),
             ),
@@ -328,7 +329,7 @@ class _Swatch extends StatelessWidget {
 }
 
 class _SliderTile extends StatelessWidget {
-  final IconData icon;
+  final AppIconData icon;
   final String label;
   final double value;
   final double max;
@@ -349,7 +350,7 @@ class _SliderTile extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
     child: Row(
       children: [
-        Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        AppIcon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 12),
         SizedBox(width: 92, child: Text(label)),
         Expanded(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 /// Square cover: the first song's artwork, or a 2x2 collage with 4+ songs
 class PlaylistCover extends StatelessWidget {
@@ -19,8 +20,8 @@ class PlaylistCover extends StatelessWidget {
           dimension: size,
           child: ColoredBox(
             color: scheme.surfaceContainerHighest,
-            child: Icon(
-              Icons.queue_music_rounded,
+            child: AppIcon(
+              AppIcons.queue,
               size: size * 0.45,
               color: scheme.onSurfaceVariant,
             ),

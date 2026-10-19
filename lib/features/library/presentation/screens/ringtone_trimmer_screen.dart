@@ -6,6 +6,7 @@ import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/services/ringtone_service.dart';
+import 'package:sonaplay/core/presentation/app_icons.dart';
 
 const _bars = 90;
 const _defaultLength = Duration(seconds: 30);
@@ -177,9 +178,7 @@ class _RingtoneTrimmerScreenState extends ConsumerState<RingtoneTrimmerScreen> {
                   final playing = snap.data ?? false;
                   return OutlinedButton.icon(
                     onPressed: _togglePreview,
-                    icon: Icon(
-                      playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                    ),
+                    icon: AppIcon(playing ? AppIcons.stop : AppIcons.play),
                     label: Text(playing ? 'Detener' : 'Escuchar fragmento'),
                   );
                 },
@@ -194,7 +193,7 @@ class _RingtoneTrimmerScreenState extends ConsumerState<RingtoneTrimmerScreen> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.ring_volume_rounded),
+                      : const AppIcon(AppIcons.ringtone),
                   label: const Text('Guardar como tono de llamada'),
                 ),
               ),
