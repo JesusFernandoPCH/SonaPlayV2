@@ -52,5 +52,4 @@ Seleccionar todo con contador · agregar a playlist · reproducir a continuació
 ## Pendiente en V2
 - Rediseño UI/UX completo
 - Sin probar en dispositivo: carátula desde la galería, borrado en Android 9 y 10
-- Ícono de la app (sigue el de Flutter por defecto)
 - Notificación: Android 13+ solo muestra 2 botones extra (favorito y aleatorio); repetir queda fuera
