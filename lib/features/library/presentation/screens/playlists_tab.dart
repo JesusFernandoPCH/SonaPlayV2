@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/core/motion/motion.dart';
+import 'package:sonaplay/features/library/presentation/screens/collection_screen.dart';
 import 'package:sonaplay/features/library/data/datasources/playlists_local_datasource.dart';
 import 'package:sonaplay/features/library/data/repositories/playlists_repository_impl.dart';
 import 'package:sonaplay/features/library/domain/entities/playlist.dart';
 import 'package:sonaplay/features/library/domain/usecases/create_playlist.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/playlist_cover.dart';
-import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
-import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
 import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class PlaylistsTab extends ConsumerWidget {
@@ -16,23 +16,77 @@ class PlaylistsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final playlists = ref.watch(playlistsProvider).value ?? const <Playlist>[];
-    return ListView(
+    return GridView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 220,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.78,
+      ),
       children: [
-        ListTile(
-          leading: const CircleAvatar(child: AppIcon(AppIcons.add)),
-          title: const Text('Nueva playlist'),
-          onTap: () => createPlaylistFlow(
-            context,
-            ref.read(playlistsDataSourceProvider),
+        Entrance(
+          child: _NewPlaylistCard(
+            onTap: () => createPlaylistFlow(
+              context,
+              ref.read(playlistsDataSourceProvider),
+            ),
           ),
         ),
-        if (playlists.isEmpty)
-          const CenteredMessage(
-            'Aún no tienes playlists',
-            icon: AppIcons.queue,
+        for (final (i, playlist) in playlists.indexed)
+          Entrance(
+            key: ValueKey(playlist.id),
+            delay: staggerDelay(i + 1),
+            child: _PlaylistCard(playlist: playlist),
           ),
-        for (final playlist in playlists) _PlaylistTile(playlist: playlist),
       ],
+    );
+  }
+}
+
+/// Dashed tile that starts a new playlist
+class _NewPlaylistCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NewPlaylistCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Pressable(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: AppIcon(AppIcons.add, size: 40, color: scheme.primary),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Nueva playlist',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: scheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -51,49 +105,119 @@ Future<Playlist?> createPlaylistFlow(
   return CreatePlaylist(PlaylistsRepositoryImpl(dataSource))(name);
 }
 
-class _PlaylistTile extends ConsumerWidget {
+class _PlaylistCard extends ConsumerWidget {
   final Playlist playlist;
-  const _PlaylistTile({required this.playlist});
+  const _PlaylistCard({required this.playlist});
+
+  Future<void> _menu(
+    BuildContext context,
+    PlaylistsLocalDataSource store,
+  ) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const AppIcon(AppIcons.edit),
+              title: const Text('Renombrar'),
+              onTap: () => Navigator.pop(sheet, 'rename'),
+            ),
+            ListTile(
+              leading: const AppIcon(AppIcons.delete),
+              title: const Text('Eliminar'),
+              onTap: () => Navigator.pop(sheet, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    if (action == 'rename') {
+      final name = await _askName(
+        context,
+        title: 'Renombrar playlist',
+        action: 'Guardar',
+        initial: playlist.name,
+      );
+      if (name != null) {
+        await store.updatePlaylist(
+          playlist.copyWith(name: name, updatedAt: DateTime.now()),
+        );
+      }
+    } else if (action == 'delete' &&
+        await _confirmDelete(context, playlist.name)) {
+      await store.deletePlaylist(playlist.id);
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final songs = ref.watch(playlistSongsProvider(playlist.id));
-    final dataSource = ref.read(playlistsDataSourceProvider);
-    return ListTile(
-      leading: PlaylistCover(songs: songs),
-      title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        songs.length == 1 ? '1 canción' : '${songs.length} canciones',
-      ),
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute<void>(
-          builder: (_) => PlaylistDetailScreen(playlistId: playlist.id),
+    final store = ref.read(playlistsDataSourceProvider);
+    final theme = Theme.of(context);
+    return Pressable(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => PlaylistDetailScreen(playlistId: playlist.id),
+          ),
         ),
-      ),
-      trailing: PopupMenuButton<String>(
-        tooltip: 'Opciones de la playlist',
-        onSelected: (action) async {
-          if (action == 'rename') {
-            final name = await _askName(
-              context,
-              title: 'Renombrar playlist',
-              action: 'Guardar',
-              initial: playlist.name,
-            );
-            if (name != null) {
-              await dataSource.updatePlaylist(
-                playlist.copyWith(name: name, updatedAt: DateTime.now()),
-              );
-            }
-          } else if (await _confirmDelete(context, playlist.name)) {
-            await dataSource.deletePlaylist(playlist.id);
-          }
-        },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'rename', child: Text('Renombrar')),
-          PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-        ],
+        onLongPress: () => _menu(context, store),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: LayoutBuilder(
+                builder: (context, box) =>
+                    PlaylistCover(songs: songs, size: box.maxWidth),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        playlist.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        songs.length == 1
+                            ? '1 canción'
+                            : '${songs.length} canciones',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox.square(
+                  dimension: 40,
+                  child: IconButton(
+                    tooltip: 'Opciones de ${playlist.name}',
+                    padding: EdgeInsets.zero,
+                    iconSize: 20,
+                    icon: const AppIcon(AppIcons.more),
+                    onPressed: () => _menu(context, store),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -110,13 +234,11 @@ class PlaylistDetailScreen extends ConsumerWidget {
         .value
         ?.where((p) => p.id == playlistId)
         .firstOrNull;
-    return Scaffold(
-      appBar: AppBar(title: Text(playlist?.name ?? 'Playlist')),
-      body: SongListView(
-        songs: AsyncData(ref.watch(playlistSongsProvider(playlistId))),
-        emptyText: 'Esta playlist está vacía. Agrega canciones desde su menú de opciones.',
-      ),
-      bottomNavigationBar: const MiniPlayer(),
+    return CollectionScreen(
+      kind: 'Playlist',
+      title: playlist?.name ?? 'Playlist',
+      songs: AsyncData(ref.watch(playlistSongsProvider(playlistId))),
+      emptyText: 'Esta playlist está vacía. Agrega canciones desde su menú de opciones.',
     );
   }
 }

@@ -67,3 +67,34 @@ List<Folder> groupByFolder(List<Song> songs) {
       ),
   ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 }
+
+typedef SearchResults = ({
+  List<String> artists,
+  List<String> albums,
+  List<Song> songs,
+});
+
+/// Search grouped like a music app: artists and albums whose name matches
+/// (those starting with the query first), then the matching songs
+SearchResults searchLibrary(List<Song> songs, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return (artists: const [], albums: const [], songs: const []);
+
+  List<String> names(Iterable<String?> values) {
+    final matching = {
+      for (final v in values)
+        if (v != null && v.isNotEmpty && v.toLowerCase().contains(q)) v,
+    }.toList();
+    int rank(String v) => v.toLowerCase().startsWith(q) ? 0 : 1;
+    return matching..sort((a, b) {
+      final byRank = rank(a).compareTo(rank(b));
+      return byRank != 0 ? byRank : a.toLowerCase().compareTo(b.toLowerCase());
+    });
+  }
+
+  return (
+    artists: names(songs.map((s) => s.artist)),
+    albums: names(songs.map((s) => s.album)),
+    songs: searchSongs(songs, query),
+  );
+}

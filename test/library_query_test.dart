@@ -53,4 +53,17 @@ void main() {
     expect(ids(folders.last.songs), ['1', '3']);
     expect(folders.last.path, '/m/Rock');
   });
+
+  test('groups search into artists, albums and songs, prefix matches first', () {
+    final library = [
+      _song('1', title: 'Rain', artist: 'Brainstorm', album: 'Rainy days'),
+      _song('2', title: 'Sun', artist: 'Rainbow', album: 'Rainbow'),
+      _song('3', title: 'Moon', artist: 'Rainbow'),
+    ];
+    final r = searchLibrary(library, 'rain');
+    expect(r.artists, ['Rainbow', 'Brainstorm']);
+    expect(r.albums, ['Rainbow', 'Rainy days']);
+    expect(ids(r.songs), ['1', '2', '3']);
+    expect(searchLibrary(library, '  ').artists, isEmpty);
+  });
 }

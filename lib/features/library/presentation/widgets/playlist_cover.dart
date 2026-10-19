@@ -29,7 +29,11 @@ class PlaylistCover extends StatelessWidget {
         ),
       );
     }
-    if (songs.length < 4) return Artwork(songId: songs.first.id, size: size);
+    // Big covers load the sharper artwork
+    final large = size > 100;
+    if (songs.length < 4) {
+      return Artwork(songId: songs.first.id, size: size, large: large);
+    }
 
     final half = size / 2;
     return ClipRRect(
@@ -40,7 +44,7 @@ class PlaylistCover extends StatelessWidget {
           children: [
             for (final song in songs.take(4))
               // Square tiles; the outer clip rounds the collage corners
-              Artwork(songId: song.id, size: half, square: true),
+              Artwork(songId: song.id, size: half, square: true, large: large),
           ],
         ),
       ),

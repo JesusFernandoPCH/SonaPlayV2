@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/features/library/presentation/screens/collection_screen.dart';
 import 'package:sonaplay/features/library/domain/entities/folder.dart';
 import 'package:sonaplay/features/library/domain/library_query.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
-import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
 import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class FoldersTab extends ConsumerWidget {
@@ -71,13 +71,11 @@ class FolderDetailScreen extends ConsumerWidget {
             sort,
           ),
         );
-    return Scaffold(
-      appBar: AppBar(title: Text(name)),
-      body: SongListView(
-        songs: songs,
-        emptyText: 'Esta carpeta ya no tiene música',
-      ),
-      bottomNavigationBar: const MiniPlayer(),
+    return CollectionScreen(
+      kind: 'Carpeta',
+      title: name,
+      songs: songs,
+      emptyText: 'Esta carpeta ya no tiene música',
     );
   }
 }
