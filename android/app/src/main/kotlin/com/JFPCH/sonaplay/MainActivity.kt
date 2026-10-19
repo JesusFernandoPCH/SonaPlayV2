@@ -27,6 +27,18 @@ class MainActivity: AudioServiceFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         mediaStore.attach(flutterEngine.dartExecutor.binaryMessenger)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "sonaplay/app").setMethodCallHandler { call, result ->
+            if (call.method == "openUrl") {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(call.arguments as String)))
+                    result.success(null)
+                } catch (e: android.content.ActivityNotFoundException) {
+                    result.error("NO_APP", "No app can open this link", null)
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setAndroidRingtone") {
                 val filePath = call.argument<String>("path") ?: return@setMethodCallHandler

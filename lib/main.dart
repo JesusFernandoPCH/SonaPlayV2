@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:audio_service/audio_service.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:sonaplay/app.dart';
+import 'package:sonaplay/core/presentation/update_dialog.dart';
 import 'package:sonaplay/features/library/data/models/favorite_model.dart';
 import 'package:sonaplay/features/library/data/models/hidden_songs_model.dart';
 import 'package:sonaplay/features/library/data/models/playlist_model.dart';
@@ -69,4 +71,6 @@ void main() async {
   ]);
 
   runApp(const ProviderScope(child: SonaPlayApp()));
+  // In the background: the fetch can take seconds and must not delay startup
+  unawaited(checkForRequiredUpdate(appNavigatorKey));
 }

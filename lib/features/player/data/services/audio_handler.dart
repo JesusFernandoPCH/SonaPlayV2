@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:sonaplay/features/library/data/datasources/favorites_local_datasource.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/player/data/datasources/audio_player_datasource.dart';
 import 'package:sonaplay/features/player/data/services/notification_artwork_service.dart';
@@ -14,9 +15,16 @@ class SonaPlayAudioHandler extends BaseAudioHandler
   final NotificationArtworkService _artworkService =
       NotificationArtworkService();
 
+  final FavoritesLocalDataSource _favorites = FavoritesLocalDataSource();
+
   // Stream subscriptions
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<Song?>? _currentSongSubscription;
+  StreamSubscription<Set<String>>? _favoritesSubscription;
+
+  /// Kept to redraw the notification buttons when only the favorites change
+  PlayerState _lastState = const PlayerState();
+  Set<String> _favoriteIds = {};
 
   // Multi-tap detection for wired headphones
   Timer? _clickTimer;
@@ -37,7 +45,13 @@ class SonaPlayAudioHandler extends BaseAudioHandler
     _currentSongSubscription = audioPlayer.currentSongStream.listen((song) {
       if (song != null) {
         _updateMediaItem(song);
+        _updatePlaybackState(_lastState);
       }
+    });
+
+    _favoritesSubscription = _favorites.watchFavoriteIds().listen((ids) {
+      _favoriteIds = ids;
+      _updatePlaybackState(_lastState);
     });
 
     // Set initial playback state
@@ -63,29 +77,55 @@ class SonaPlayAudioHandler extends BaseAudioHandler
 
   /// Update playback state based on player state
   void _updatePlaybackState(PlayerState state) {
+    _lastState = state;
+    final songId = audioPlayer.getCurrentSong()?.id;
+    final isFavorite = songId != null && _favoriteIds.contains(songId);
     playbackState.add(
       playbackState.value.copyWith(
         playing: state.isPlaying,
+        // Android 13+ shows previous, play and next, plus the first two custom
+        // buttons; older versions show all of them in the expanded view
         controls: [
           MediaControl.skipToPrevious,
           state.isPlaying ? MediaControl.pause : MediaControl.play,
           MediaControl.skipToNext,
-          MediaControl.stop,
-          // Favorites placeholder (NO-OP for FASE 6)
-          const MediaControl(
-            androidIcon: 'drawable/ic_favorite_border',
-            label: 'Favorite',
-            action: MediaAction.custom,
+          MediaControl.custom(
+            androidIcon: isFavorite
+                ? 'drawable/ic_favorite'
+                : 'drawable/ic_favorite_border',
+            label: isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
+            name: 'favorite',
+          ),
+          MediaControl.custom(
+            androidIcon: state.isShuffled
+                ? 'drawable/ic_shuffle_on'
+                : 'drawable/ic_shuffle_off',
+            label: state.isShuffled
+                ? 'Aleatorio activado'
+                : 'Aleatorio desactivado',
+            name: 'toggleShuffle',
+          ),
+          MediaControl.custom(
+            androidIcon: switch (state.repeatMode) {
+              RepeatMode.all => 'drawable/ic_repeat_all',
+              RepeatMode.one => 'drawable/ic_repeat_one',
+              RepeatMode.off => 'drawable/ic_repeat_off',
+            },
+            label: switch (state.repeatMode) {
+              RepeatMode.all => 'Repetir todas',
+              RepeatMode.one => 'Repetir una',
+              RepeatMode.off => 'Repetir desactivado',
+            },
+            name: 'cycleRepeat',
           ),
         ],
+        androidCompactActionIndices: const [0, 1, 2],
         systemActions: const {
           MediaAction.seek,
           MediaAction.seekForward,
           MediaAction.seekBackward,
         },
-        processingState: state.isPlaying
-            ? AudioProcessingState.ready
-            : AudioProcessingState.ready,
+        processingState: AudioProcessingState.ready,
         updatePosition: state.position,
       ),
     );
@@ -207,16 +247,20 @@ class SonaPlayAudioHandler extends BaseAudioHandler
       case 'toggleShuffle':
         await audioPlayer.toggleShuffle();
         break;
-      case 'setRepeatMode':
-        final modeIndex = extras?['mode'] as int?;
-        if (modeIndex != null) {
-          final mode = RepeatMode.values[modeIndex];
-          await audioPlayer.setRepeatMode(mode);
-        }
+      case 'cycleRepeat':
+        // Same order as the player screen's repeat button
+        await audioPlayer.setRepeatMode(switch (_lastState.repeatMode) {
+          RepeatMode.all => RepeatMode.one,
+          RepeatMode.one => RepeatMode.off,
+          RepeatMode.off => RepeatMode.all,
+        });
         break;
       case 'favorite':
-        // NO-OP placeholder for FASE 6
-        // Future implementation will handle favorites
+        final songId = audioPlayer.getCurrentSong()?.id;
+        if (songId == null) break;
+        _favoriteIds.contains(songId)
+            ? await _favorites.removeFavorite(songId)
+            : await _favorites.addFavorite(songId);
         break;
     }
   }
@@ -281,5 +325,6 @@ class SonaPlayAudioHandler extends BaseAudioHandler
     _clickTimer?.cancel();
     _playerStateSubscription?.cancel();
     _currentSongSubscription?.cancel();
+    _favoritesSubscription?.cancel();
   }
 }

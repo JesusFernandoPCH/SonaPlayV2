@@ -3,12 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 
+const _rowHeight = 72.0;
+
 /// Current queue: tap to jump, drag the handle to reorder
-class QueueScreen extends ConsumerWidget {
+class QueueScreen extends ConsumerStatefulWidget {
   const QueueScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QueueScreen> createState() => _QueueScreenState();
+}
+
+class _QueueScreenState extends ConsumerState<QueueScreen> {
+  // Opens with the current song in view, two rows below the top
+  late final _scroll = ScrollController(
+    initialScrollOffset:
+        ((ref.read(audioHandlerProvider).audioPlayer.currentIndex ?? 0) - 2)
+            .clamp(0, 1 << 30) *
+        _rowHeight,
+  );
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // The queue lives in the player; its state stream fires on every change
     ref.watch(playerStateProvider);
     ref.watch(currentSongProvider);
@@ -20,6 +41,8 @@ class QueueScreen extends ConsumerWidget {
       appBar: AppBar(title: Text('Cola · ${queue.length}')),
       body: ReorderableListView.builder(
         itemCount: queue.length,
+        scrollController: _scroll,
+        itemExtent: _rowHeight,
         buildDefaultDragHandles: false,
         padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
         onReorderItem: (from, to) =>

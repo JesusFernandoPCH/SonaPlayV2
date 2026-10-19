@@ -35,8 +35,7 @@ class TrashPurger {
 
   /// Returns the IDs really deleted; the rest stay in the trash
   /// (e.g. the user cancelled the system confirmation)
-  // ponytail: does not touch the player queue yet; the player provider must skip
-  // the current song if it is in the returned list once the UI is wired
+  /// (the caller also removes them from the player queue)
   Future<List<String>> purge(List<String> songIds) async {
     if (songIds.isEmpty) return [];
     await _ensureWriteAccess();

@@ -7,6 +7,7 @@ import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
+import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/settings/data/datasources/settings_local_datasource.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -158,8 +159,16 @@ class _TrashScreen extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
+    final container = ProviderScope.containerOf(context, listen: false);
     final deleted = await TrashPurger().purge(ids);
+    // The files are gone: rescan so they don't come back once out of the trash,
+    // and drop them from the queue (moving on if one was playing)
+    container.invalidate(songsProvider);
+    await container
+        .read(audioHandlerProvider)
+        .audioPlayer
+        .removeSongs(deleted.toSet());
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -235,7 +244,14 @@ class _SongRow extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
     leading: Artwork(songId: song.id),
     title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-    subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+    // The file name tells apart copies of the same song
+    subtitle: Text(
+      '${song.artist}\n${song.filePath.split('/').last}',
+      // Long names wrap: the end is often what differs (e.g. "_1.mp3")
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+    ),
+    isThreeLine: true,
     trailing: action,
   );
 }

@@ -244,6 +244,38 @@ class AudioPlayerDataSource {
     _emitState();
   }
 
+  /// Drops songs whose files no longer exist. If the current one is among them,
+  /// the song that takes its place is loaded, playing only if it was playing.
+  Future<void> removeSongs(Set<String> ids) async {
+    final current = getCurrentSong();
+    if (current == null) return;
+    final removedBefore = _activePlaylist
+        .take(_currentIndex)
+        .where((s) => ids.contains(s.id))
+        .length;
+    _originalPlaylist.removeWhere((s) => ids.contains(s.id));
+    _shuffledPlaylist.removeWhere((s) => ids.contains(s.id));
+
+    if (!ids.contains(current.id)) {
+      _currentIndex -= removedBefore;
+      _emitState();
+      return;
+    }
+    if (_activePlaylist.isEmpty) return stop();
+
+    final next = _currentIndex - removedBefore;
+    _currentIndex = next < _activePlaylist.length ? next : 0;
+    if (_player.playing) {
+      // play() only completes when playback stops, so don't wait for it
+      unawaited(_playSongAtIndex(_currentIndex));
+    } else {
+      final song = _activePlaylist[_currentIndex];
+      _currentSongController.add(song);
+      await _player.setFilePath(song.filePath);
+      _emitState();
+    }
+  }
+
   /// Get current song
   Song? getCurrentSong() {
     if (_currentIndex >= 0 && _currentIndex < _activePlaylist.length) {
