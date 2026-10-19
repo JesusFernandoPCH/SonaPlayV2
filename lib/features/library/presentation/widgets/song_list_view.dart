@@ -9,7 +9,7 @@ import 'package:sonaplay/features/library/presentation/providers/library_provide
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_tile.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
-import 'package:sonaplay/features/player/presentation/screens/player_screen.dart';
+import 'package:sonaplay/features/player/presentation/player_route.dart';
 
 /// Song list with a "count · Reproducir · Aleatorio" header; handles loading,
 /// error and empty states. Used by every tab and detail screen.

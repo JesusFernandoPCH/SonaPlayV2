@@ -8,139 +8,10 @@ import 'package:sonaplay/features/library/presentation/providers/library_provide
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 import 'package:sonaplay/features/player/domain/entities/player_state.dart';
+import 'package:sonaplay/features/player/presentation/player_route.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/equalizer_screen.dart';
 import 'package:sonaplay/features/player/presentation/widgets/queue_list.dart';
-
-/// The current song's artwork, flying between the mini player and the player
-class NowPlayingHero extends StatelessWidget {
-  final String songId;
-  final Widget child;
-  const NowPlayingHero({super.key, required this.songId, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Hero(
-    tag: 'now-playing-artwork',
-    // Not while dragging: the artwork stays on the player, under the finger
-    // Redrawn at the in-flight size, so the corners stay round as it grows
-    flightShuttleBuilder: (_, _, _, _, _) => LayoutBuilder(
-      builder: (context, box) =>
-          Artwork(songId: songId, size: box.maxWidth, large: true),
-    ),
-    child: child,
-  );
-}
-
-/// Rises from the bottom. While dragged, the finger drives the route's own
-/// animation, and on release a spring finishes the move at the finger's speed
-/// (the same approach as the iOS back swipe).
-class PlayerRoute extends PageRoute<void> {
-  PlayerRoute();
-
-  @override
-  Color? get barrierColor => null;
-  @override
-  String? get barrierLabel => null;
-  // ponytail: the page below is composited the whole time the player is open;
-  // flip the overlay entry to opaque between drags if that ever costs frames
-  @override
-  bool get opaque => false;
-  @override
-  bool get maintainState => true;
-  @override
-  Duration get transitionDuration => Motion.slow;
-  @override
-  Duration get reverseTransitionDuration => Motion.slow;
-
-  @override
-  Widget buildPage(context, animation, secondaryAnimation) =>
-      const PlayerScreen();
-
-  @override
-  Widget buildTransitions(context, animation, secondaryAnimation, child) =>
-      ValueListenableBuilder(
-        valueListenable: navigator!.userGestureInProgressNotifier,
-        builder: (context, dragging, child) {
-          // Linear while dragging, so the page stays under the finger
-          final progress = dragging
-              ? animation
-              : CurvedAnimation(
-                  parent: animation,
-                  curve: Motion.enter,
-                  reverseCurve: Motion.enter.flipped,
-                );
-          return AnimatedBuilder(
-            animation: progress,
-            builder: (context, child) {
-              final t = progress.value;
-              final height = MediaQuery.sizeOf(context).height;
-              // As it leaves it turns into a card: slightly smaller with
-              // round corners, so even a small drag shows it is moving
-              final away = (1 - t).clamp(0.0, 1.0);
-              return Transform.translate(
-                offset: Offset(0, away * height),
-                child: Transform.scale(
-                  scale: 1 - 0.08 * (away * 4).clamp(0.0, 1.0),
-                  alignment: Alignment.topCenter,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      32 * (away * 6).clamp(0.0, 1.0),
-                    ),
-                    child: child,
-                  ),
-                ),
-              );
-            },
-            child: child,
-          );
-        },
-        child: child,
-      );
-
-  void dragStart() => navigator!.didStartUserGesture();
-
-  /// [fraction] of the screen height moved down
-  void dragUpdate(double fraction) => controller!.value -= fraction;
-
-  /// [velocity] in screen heights per second, positive downwards
-  void dragEnd(double velocity) {
-    final controller = this.controller!;
-    final close =
-        velocity > 1.2 || (velocity > -1.2 && controller.value < 0.75);
-    // Unhurried, but quicker the faster the finger was moving
-    final speedUp = 1 + velocity.abs().clamp(0.0, 6.0) / 3;
-    if (close) {
-      navigator!.pop();
-      // Replaces pop's default reverse, continuing from where the finger left
-      controller.animateBack(
-        0,
-        duration: Duration(
-          milliseconds: (560 * controller.value / speedUp)
-              .clamp(280, 560)
-              .round(),
-        ),
-        curve: Curves.easeOutCubic,
-      );
-    } else {
-      controller.animateTo(
-        1,
-        duration: const Duration(milliseconds: 360),
-        curve: Curves.easeOutCubic,
-      );
-    }
-    if (controller.isAnimating) {
-      late final AnimationStatusListener done;
-      done = (status) {
-        if (status.isAnimating) return;
-        navigator?.didStopUserGesture();
-        controller.removeStatusListener(done);
-      };
-      controller.addStatusListener(done);
-    } else {
-      navigator!.didStopUserGesture();
-    }
-  }
-}
 
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
@@ -231,12 +102,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                   // Drag down anywhere, gaps included: the player follows the finger
                   behavior: HitTestBehavior.translucent,
                   onVerticalDragStart: (_) => _route?.dragStart(),
-                  onVerticalDragUpdate: (d) => _route?.dragUpdate(
-                    d.primaryDelta! / context.size!.height,
-                  ),
-                  onVerticalDragEnd: (d) => _route?.dragEnd(
-                    d.primaryVelocity! / context.size!.height,
-                  ),
+                  onVerticalDragUpdate: (d) =>
+                      _route?.dragUpdate(d.primaryDelta!),
+                  onVerticalDragEnd: (d) => _route?.dragEnd(d.primaryVelocity!),
                   onVerticalDragCancel: () => _route?.dragEnd(0),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -285,8 +153,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                                   box.maxHeight - 32,
                                 );
                                 return Center(
-                                  child: NowPlayingHero(
-                                    songId: song.id,
+                                  // Measured by the route; hidden while its
+                                  // flying copy moves to or from the card
+                                  child: _HiddenWhileMorphing(
+                                    key: _route?.artworkKey,
                                     child: AnimatedSwitcher(
                                       duration: const Duration(
                                         milliseconds: 350,
@@ -754,6 +624,24 @@ class _QueuePanel extends ConsumerWidget {
           const Expanded(child: QueueList()),
         ],
       ),
+    );
+  }
+}
+
+/// Shows [child] only once the player is fully open
+class _HiddenWhileMorphing extends StatelessWidget {
+  final Widget child;
+  const _HiddenWhileMorphing({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null) return child;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) =>
+          Opacity(opacity: animation.value >= 1 ? 1 : 0, child: child),
+      child: child,
     );
   }
 }
