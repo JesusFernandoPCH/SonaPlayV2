@@ -32,6 +32,7 @@ class MainActivity: AudioServiceFragmentActivity() {
                 val filePath = call.argument<String>("path") ?: return@setMethodCallHandler
                 val startTimeMs = call.argument<Int>("startTimeMs") ?: 0
                 val endTimeMs = call.argument<Int>("endTimeMs") ?: 0
+                val title = call.argument<String>("title") ?: "SonaPlay"
                 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.System.canWrite(this)) {
                     val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
@@ -47,7 +48,8 @@ class MainActivity: AudioServiceFragmentActivity() {
                     try {
                         val trimmedFile = trimAudioFile(filePath, startTimeMs, endTimeMs)
                         if (trimmedFile != null) {
-                            val success = setRingtoneFromStorage(trimmedFile)
+                            val success = setRingtoneFromStorage(trimmedFile, title)
+                            trimmedFile.delete()
                             uiThreadHandler.post {
                                 if (success) {
                                     result.success(true)
@@ -122,6 +124,7 @@ class MainActivity: AudioServiceFragmentActivity() {
             val bufferInfo = MediaCodec.BufferInfo()
 
             var muxerTrackIndex = -1
+            var firstSampleUs = -1L
 
             if (isMp3) {
                 // MP3 se exporta transmitiendo en crudo los trozos desde el Extractor hacia un Stream (Bypass Muxer)
@@ -150,7 +153,9 @@ class MainActivity: AudioServiceFragmentActivity() {
                     buffer.clear()
                     outputStream?.write(chunk)
                 } else {
-                    bufferInfo.presentationTimeUs = presentationTimeUs
+                    // Start the clip at 0, otherwise players add a gap before it
+                    if (firstSampleUs < 0) firstSampleUs = presentationTimeUs
+                    bufferInfo.presentationTimeUs = presentationTimeUs - firstSampleUs
                     bufferInfo.offset = 0
                     bufferInfo.flags = extractor.sampleFlags
                     muxer?.writeSampleData(muxerTrackIndex, buffer, bufferInfo)
@@ -173,12 +178,13 @@ class MainActivity: AudioServiceFragmentActivity() {
         }
     }
 
-    private fun setRingtoneFromStorage(file: File): Boolean {
+    private fun setRingtoneFromStorage(file: File, title: String): Boolean {
         try {
             val isMp3 = file.name.endsWith(".mp3")
             val mime = if (isMp3) "audio/mpeg" else "audio/mp4"
-            val title = "SonaPlay Ringtone"
-            val fileName = "SonaPlay_Ringtone_${System.currentTimeMillis()}.${if (isMp3) "mp3" else "m4a"}"
+            // Android shows the file name as the ringtone's title, so name it after the song
+            val safeTitle = title.replace(Regex("[\\/:*?\"<>|]"), "_").trim()
+            val fileName = "$safeTitle (tono).${if (isMp3) "mp3" else "m4a"}"
 
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.TITLE, title)

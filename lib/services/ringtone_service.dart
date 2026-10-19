@@ -10,6 +10,7 @@ class RingtoneService {
   /// Delega el recorte y el establecimiento del Tono de Llamada a la capa Nativa Android
   static Future<bool> setAsRingtone({
     required String filePath,
+    required String title,
     required double startSeconds,
     required double endSeconds,
   }) async {
@@ -23,6 +24,7 @@ class RingtoneService {
     try {
       final bool result = await _channel.invokeMethod('setAndroidRingtone', {
         'path': filePath,
+        'title': title,
         // Convertimos a milisegundos para el extractor nativo de Android
         'startTimeMs': (startSeconds * 1000).toInt(),
         'endTimeMs': (endSeconds * 1000).toInt(),
