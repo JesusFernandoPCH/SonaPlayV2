@@ -96,7 +96,7 @@ class _SongOptions extends ConsumerWidget {
               'Temporizador para dormir',
               () {
                 close();
-                _pickSleepTimer(host, container);
+                pickSleepTimer(host, container);
               },
               detail: sleepEnds == null
                   ? null
@@ -318,10 +318,7 @@ Future<void> _pickSpeed(BuildContext context, ProviderContainer ref) async {
 
 const _sleepMinutes = [15, 30, 45, 60, 90];
 
-Future<void> _pickSleepTimer(
-  BuildContext context,
-  ProviderContainer ref,
-) async {
+Future<void> pickSleepTimer(BuildContext context, ProviderContainer ref) async {
   final timer = ref.read(sleepTimerProvider.notifier);
   final active = ref.read(sleepTimerProvider) != null;
   final minutes = await showDialog<int>(

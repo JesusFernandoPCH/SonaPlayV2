@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:sonaplay/core/appearance/appearance.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/core/theme/app_theme.dart';
 import 'package:sonaplay/features/library/data/datasources/media_store_datasource.dart';
@@ -82,6 +83,8 @@ class SleepTimerNotifier extends Notifier<DateTime?> {
 
 /// App accent: the dominant color of the current song's artwork
 final accentColorProvider = FutureProvider<Color>((ref) async {
+  final appearance = ref.watch(appearanceProvider);
+  if (!appearance.accentFromArtwork) return appearance.fixedAccent;
   final song = ref.watch(currentSongProvider).value;
   if (song == null) return kDefaultAccent;
   final bytes = await ref.watch(artworkProvider(song.id).future);

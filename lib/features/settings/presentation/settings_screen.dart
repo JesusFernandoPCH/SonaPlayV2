@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/services/trash_purger.dart';
@@ -9,6 +10,7 @@ import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/settings/data/datasources/settings_local_datasource.dart';
+import 'package:sonaplay/features/settings/presentation/appearance_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -59,10 +61,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       MaterialPageRoute<void>(builder: (_) => screen),
     );
 
+    Widget header(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
       body: ListView(
         children: [
+          header('Personalización'),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('Apariencia'),
+            subtitle: const Text('Fondo, difuminado y color de acento'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => open(const AppearanceScreen()),
+          ),
+          header('Biblioteca'),
           ListTile(
             leading: const Icon(Icons.visibility_off_rounded),
             title: const Text('Archivos ocultos'),
@@ -86,6 +108,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : 'Se ocultan audios de menos de $minDuration segundos',
             ),
             onTap: _pickMinDuration,
+          ),
+          header('Acerca de'),
+          FutureBuilder(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snap) => ListTile(
+              leading: const Icon(Icons.info_outline_rounded),
+              title: const Text('SonaPlay'),
+              subtitle: Text(
+                snap.hasData ? 'Versión ${snap.data!.version}' : '',
+              ),
+            ),
           ),
         ],
       ),

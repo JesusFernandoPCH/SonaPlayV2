@@ -26,6 +26,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final song = ref.watch(currentSongProvider).value;
     final state = ref.watch(playerStateProvider).value ?? const PlayerState();
     final player = ref.watch(audioHandlerProvider).audioPlayer;
+    final sleepEnds = ref.watch(sleepTimerProvider);
     final isFavorite =
         song != null &&
         (ref.watch(favoriteIdsProvider).value?.contains(song.id) ?? false);
@@ -41,194 +42,263 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         .clamp(0.0, totalMs);
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color.alphaBlend(
-                scheme.primary.withValues(alpha: 0.28),
-                scheme.surface,
-              ),
-              scheme.surface,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Row(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          _ArtworkBackdrop(songId: song.id),
+          SafeArea(
+            child: GestureDetector(
+              // Swipe down anywhere to close, like dismissing a sheet
+              onVerticalDragEnd: (d) {
+                if ((d.primaryVelocity ?? 0) > 400) Navigator.pop(context);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
                   children: [
-                    IconButton(
-                      tooltip: 'Cerrar',
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Reproduciendo',
-                        textAlign: TextAlign.center,
-                        style: text.labelLarge,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Cola',
-                      icon: const Icon(Icons.queue_music_rounded),
-                      onPressed: () => _open(const QueueScreen()),
-                    ),
-                    IconButton(
-                      tooltip: 'Opciones de la canción',
-                      icon: const Icon(Icons.more_vert_rounded),
-                      onPressed: () => showSongOptions(context, song),
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, box) => Center(
-                      child: Artwork(
-                        songId: song.id,
-                        size: min(box.maxWidth, box.maxHeight - 24),
-                        large: true,
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            song.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.titleLarge,
-                          ),
-                          Text(
-                            song.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.bodyMedium?.copyWith(
+                    Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Cerrar',
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          iconSize: 32,
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'REPRODUCIENDO',
+                            textAlign: TextAlign.center,
+                            style: text.labelMedium?.copyWith(
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w700,
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
-                        ],
+                        ),
+                        IconButton(
+                          tooltip: 'Opciones de la canción',
+                          icon: const Icon(Icons.more_vert_rounded),
+                          onPressed: () => showSongOptions(context, song),
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        // Swipe the artwork sideways to change song
+                        onHorizontalDragEnd: (d) {
+                          final v = d.primaryVelocity ?? 0;
+                          if (v < -300) player.skipToNext();
+                          if (v > 300) player.skipToPrevious();
+                        },
+                        child: LayoutBuilder(
+                          builder: (context, box) {
+                            final size = min(box.maxWidth, box.maxHeight - 32);
+                            return Center(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 350),
+                                child: DecoratedBox(
+                                  key: ValueKey(song.id),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(
+                                      size * 0.16,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: scheme.primary.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        blurRadius: 48,
+                                        offset: const Offset(0, 16),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Artwork(
+                                    songId: song.id,
+                                    size: size,
+                                    large: true,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: isFavorite
-                          ? 'Quitar de favoritos'
-                          : 'Agregar a favoritos',
-                      icon: Icon(
-                        isFavorite
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: isFavorite ? scheme.primary : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                song.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                song.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.titleMedium?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: isFavorite
+                              ? 'Quitar de favoritos'
+                              : 'Agregar a favoritos',
+                          iconSize: 28,
+                          icon: Icon(
+                            isFavorite
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: isFavorite ? scheme.primary : null,
+                          ),
+                          onPressed: () {
+                            final favorites = ref.read(
+                              favoritesDataSourceProvider,
+                            );
+                            isFavorite
+                                ? favorites.removeFavorite(song.id)
+                                : favorites.addFavorite(song.id);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 6,
+                        inactiveTrackColor: scheme.onSurface.withValues(
+                          alpha: 0.2,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onPressed: () {
-                        final favorites = ref.read(favoritesDataSourceProvider);
-                        isFavorite
-                            ? favorites.removeFavorite(song.id)
-                            : favorites.addFavorite(song.id);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Slider(
-                  value: positionMs,
-                  max: totalMs,
-                  onChanged: (v) => setState(() => _dragMs = v),
-                  onChangeEnd: (v) async {
-                    await player.seek(Duration(milliseconds: v.round()));
-                    setState(() => _dragMs = null);
-                  },
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_format(positionMs), style: text.bodySmall),
-                      Text(_format(totalMs), style: text.bodySmall),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _ModeButton(
-                      active: state.isShuffled,
-                      tooltip: state.isShuffled
-                          ? 'Aleatorio activado'
-                          : 'Aleatorio desactivado',
-                      icon: Icons.shuffle_rounded,
-                      onPressed: player.toggleShuffle,
-                    ),
-                    IconButton(
-                      tooltip: 'Anterior',
-                      iconSize: 36,
-                      icon: const Icon(Icons.skip_previous_rounded),
-                      onPressed: player.skipToPrevious,
-                    ),
-                    IconButton.filled(
-                      tooltip: state.isPlaying ? 'Pausar' : 'Reproducir',
-                      iconSize: 44,
-                      padding: const EdgeInsets.all(16),
-                      icon: Icon(
-                        state.isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
+                      child: Slider(
+                        value: positionMs,
+                        max: totalMs,
+                        onChanged: (v) => setState(() => _dragMs = v),
+                        onChangeEnd: (v) async {
+                          await player.seek(Duration(milliseconds: v.round()));
+                          setState(() => _dragMs = null);
+                        },
                       ),
-                      onPressed: state.isPlaying ? player.pause : player.resume,
                     ),
-                    IconButton(
-                      tooltip: 'Siguiente',
-                      iconSize: 36,
-                      icon: const Icon(Icons.skip_next_rounded),
-                      onPressed: player.skipToNext,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_format(positionMs), style: text.bodySmall),
+                        Text(_format(totalMs), style: text.bodySmall),
+                      ],
                     ),
-                    _ModeButton(
-                      active: state.repeatMode != RepeatMode.off,
-                      tooltip: switch (state.repeatMode) {
-                        RepeatMode.all => 'Repetir todas',
-                        RepeatMode.one => 'Repetir una',
-                        RepeatMode.off => 'Repetir desactivado',
-                      },
-                      icon: state.repeatMode == RepeatMode.one
-                          ? Icons.repeat_one_rounded
-                          : Icons.repeat_rounded,
-                      onPressed: () =>
-                          player.setRepeatMode(switch (state.repeatMode) {
-                            RepeatMode.all => RepeatMode.one,
-                            RepeatMode.one => RepeatMode.off,
-                            RepeatMode.off => RepeatMode.all,
-                          }),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _ModeButton(
+                          active: state.isShuffled,
+                          tooltip: state.isShuffled
+                              ? 'Aleatorio activado'
+                              : 'Aleatorio desactivado',
+                          icon: Icons.shuffle_rounded,
+                          onPressed: player.toggleShuffle,
+                        ),
+                        IconButton(
+                          tooltip: 'Anterior',
+                          iconSize: 40,
+                          icon: const Icon(Icons.skip_previous_rounded),
+                          onPressed: player.skipToPrevious,
+                        ),
+                        SizedBox.square(
+                          dimension: 84,
+                          child: IconButton.filled(
+                            tooltip: state.isPlaying ? 'Pausar' : 'Reproducir',
+                            iconSize: 44,
+                            style: IconButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  // Rounder while paused, like a play "button"
+                                  state.isPlaying ? 26 : 42,
+                                ),
+                              ),
+                            ),
+                            icon: Icon(
+                              state.isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                            ),
+                            onPressed: state.isPlaying
+                                ? player.pause
+                                : player.resume,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Siguiente',
+                          iconSize: 40,
+                          icon: const Icon(Icons.skip_next_rounded),
+                          onPressed: player.skipToNext,
+                        ),
+                        _ModeButton(
+                          active: state.repeatMode != RepeatMode.off,
+                          tooltip: switch (state.repeatMode) {
+                            RepeatMode.all => 'Repetir todas',
+                            RepeatMode.one => 'Repetir una',
+                            RepeatMode.off => 'Repetir desactivado',
+                          },
+                          icon: state.repeatMode == RepeatMode.one
+                              ? Icons.repeat_one_rounded
+                              : Icons.repeat_rounded,
+                          onPressed: () =>
+                              player.setRepeatMode(switch (state.repeatMode) {
+                                RepeatMode.all => RepeatMode.one,
+                                RepeatMode.one => RepeatMode.off,
+                                RepeatMode.off => RepeatMode.all,
+                              }),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _BottomAction(
+                          icon: Icons.equalizer_rounded,
+                          label: 'Ecualizador',
+                          onPressed: () => _open(const EqualizerScreen()),
+                        ),
+                        _BottomAction(
+                          icon: Icons.bedtime_outlined,
+                          label: sleepEnds == null
+                              ? 'Temporizador'
+                              : TimeOfDay.fromDateTime(sleepEnds)
+                                    .format(context),
+                          active: sleepEnds != null,
+                          onPressed: () => pickSleepTimer(
+                            context,
+                            ProviderScope.containerOf(context, listen: false),
+                          ),
+                        ),
+                        _BottomAction(
+                          icon: Icons.queue_music_rounded,
+                          label: 'Cola',
+                          onPressed: () => _open(const QueueScreen()),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () => _open(const EqualizerScreen()),
-                      icon: const Icon(Icons.equalizer_rounded),
-                      label: const Text('Ecualizador'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -239,6 +309,87 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   static String _format(double ms) {
     final seconds = ms ~/ 1000;
     return '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+  }
+}
+
+/// The artwork stretched over the whole screen and darkened. Decoded at 32px
+/// and scaled up, which blurs it for free (a real blur filter would be redone
+/// on every progress tick).
+class _ArtworkBackdrop extends ConsumerWidget {
+  final String songId;
+  const _ArtworkBackdrop({required this.songId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bytes = ref.watch(artworkProvider(songId)).value;
+    final scheme = Theme.of(context).colorScheme;
+    return RepaintBoundary(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        child: Stack(
+          key: ValueKey(bytes == null ? 'none' : songId),
+          fit: StackFit.expand,
+          children: [
+            if (bytes != null)
+              Image.memory(
+                bytes,
+                fit: BoxFit.cover,
+                cacheWidth: 32,
+                filterQuality: FilterQuality.high,
+                gaplessPlayback: true,
+              ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: bytes == null
+                      // No artwork: an accent glow over the app background
+                      ? [
+                          scheme.primary.withValues(alpha: 0.25),
+                          Colors.transparent,
+                        ]
+                      : [
+                          // Darker at the top too, so the header reads over
+                          // light artwork
+                          Colors.black.withValues(alpha: 0.5),
+                          Colors.black.withValues(alpha: 0.6),
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final bool active;
+
+  const _BottomAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: active ? scheme.primary : scheme.onSurfaceVariant,
+      ),
+      icon: Icon(icon, size: 20),
+      label: Text(label),
+    );
   }
 }
 

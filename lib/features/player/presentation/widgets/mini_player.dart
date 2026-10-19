@@ -1,48 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/core/theme/app_theme.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/player_screen.dart';
 
-/// Bottom bar with the current song; hidden while nothing is queued
+/// Floating card with the current song; hidden while nothing is queued
 class MiniPlayer extends ConsumerWidget {
-  const MiniPlayer({super.key});
+  /// Sits on a navigation bar, which already keeps clear of the system bar
+  final bool aboveNavigation;
+
+  const MiniPlayer({super.key, this.aboveNavigation = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final song = ref.watch(currentSongProvider).value;
-    // Still reserves the system navigation bar inset so lists end above it
-    if (song == null) return const SafeArea(top: false, child: SizedBox());
+    if (song == null) {
+      // Still reserves the system navigation bar inset so lists end above it
+      return aboveNavigation
+          ? const SizedBox.shrink()
+          : const SafeArea(top: false, child: SizedBox());
+    }
 
     final state = ref.watch(playerStateProvider).value;
     final player = ref.watch(audioHandlerProvider).audioPlayer;
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final total = state?.duration.inMilliseconds ?? 0;
     final progress = total > 0 ? state!.position.inMilliseconds / total : 0.0;
     final isPlaying = state?.isPlaying ?? false;
 
-    return Material(
-      color: Color.alphaBlend(
-        scheme.primary.withValues(alpha: 0.14),
-        scheme.surfaceContainer,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              minHeight: 2,
-              backgroundColor: Colors.transparent,
-            ),
-            InkWell(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const PlayerScreen()),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+    final card = Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      child: Material(
+        color: barColor(scheme),
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(builder: (_) => const PlayerScreen()),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 4, 6),
                 child: Row(
                   children: [
                     Artwork(songId: song.id, size: 44),
@@ -55,14 +58,17 @@ class MiniPlayer extends ConsumerWidget {
                             song.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           Text(
                             song.artist,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -89,10 +95,17 @@ class MiniPlayer extends ConsumerWidget {
                   ],
                 ),
               ),
-            ),
-          ],
+              LinearProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                minHeight: 3,
+                backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    return aboveNavigation ? card : SafeArea(top: false, child: card);
   }
 }

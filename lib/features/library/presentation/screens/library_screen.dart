@@ -9,28 +9,59 @@ import 'package:sonaplay/features/library/presentation/widgets/song_list_view.da
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
 import 'package:sonaplay/features/settings/presentation/settings_screen.dart';
 
-class LibraryScreen extends ConsumerWidget {
+const _sections = [
+  (
+    label: 'Canciones',
+    icon: Icons.music_note_outlined,
+    selected: Icons.music_note_rounded,
+  ),
+  (
+    label: 'Playlists',
+    icon: Icons.queue_music_outlined,
+    selected: Icons.queue_music_rounded,
+  ),
+  (
+    label: 'Favoritas',
+    icon: Icons.favorite_border_rounded,
+    selected: Icons.favorite_rounded,
+  ),
+  (
+    label: 'Carpetas',
+    icon: Icons.folder_outlined,
+    selected: Icons.folder_rounded,
+  ),
+];
+
+/// Home: the four library sections behind a bottom navigation bar
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  var _section = 0;
+
+  void _open(Widget screen) =>
+      Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
+
+  @override
+  Widget build(BuildContext context) {
     final filter = ref.watch(libraryFilterProvider);
     final filtered = filter.artist != null || filter.album != null;
+    final onSongs = _section == 0;
 
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Biblioteca'),
-          actions: [
-            IconButton(
-              tooltip: 'Buscar',
-              icon: const Icon(Icons.search_rounded),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const SearchScreen()),
-              ),
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 64,
+        title: Text(
+          _sections[_section].label,
+          style: Theme.of(context).textTheme.headlineMedium
+              ?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        actions: [
+          if (onSongs) ...[
             IconButton(
               tooltip: 'Ordenar',
               icon: const Icon(Icons.sort_rounded),
@@ -43,43 +74,92 @@ class LibraryScreen extends ConsumerWidget {
               selectedIcon: const Icon(Icons.filter_alt_rounded),
               onPressed: () => showFilterSheet(context),
             ),
-            IconButton(
-              tooltip: 'Ajustes',
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              ),
-            ),
           ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Canciones'),
-              Tab(text: 'Playlists'),
-              Tab(text: 'Favoritos'),
-              Tab(text: 'Carpetas'),
+          IconButton(
+            tooltip: 'Ajustes',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => _open(const SettingsScreen()),
+          ),
+          const SizedBox(width: 4),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(64),
+          child: _SearchPill(onTap: () => _open(const SearchScreen())),
+        ),
+      ),
+      // Keeps each section's scroll position when switching
+      body: IndexedStack(
+        index: _section,
+        children: [
+          SongListView(
+            songs: ref.watch(librarySongsProvider),
+            emptyText: filtered
+                ? 'Ninguna canción coincide con los filtros'
+                : 'No encontramos canciones en este teléfono',
+            banner: filtered ? _FilterChips(filter: filter) : null,
+          ),
+          const PlaylistsTab(),
+          SongListView(
+            songs: ref.watch(favoriteSongsProvider),
+            emptyText:
+                'Toca el corazón en el reproductor para guardar favoritas',
+          ),
+          const FoldersTab(),
+        ],
+      ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(aboveNavigation: true),
+          NavigationBar(
+            selectedIndex: _section,
+            onDestinationSelected: (i) => setState(() => _section = i),
+            destinations: [
+              for (final s in _sections)
+                NavigationDestination(
+                  icon: Icon(s.icon),
+                  selectedIcon: Icon(s.selected),
+                  label: s.label,
+                ),
             ],
           ),
-        ),
-        body: TabBarView(
-          children: [
-            SongListView(
-              songs: ref.watch(librarySongsProvider),
-              emptyText: filtered
-                  ? 'Ninguna canción coincide con los filtros'
-                  : 'No encontramos canciones en este teléfono',
-              banner: filtered ? _FilterChips(filter: filter) : null,
+        ],
+      ),
+    );
+  }
+}
+
+/// Looks like a search field; opens the search screen
+class _SearchPill extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SearchPill({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Material(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.85),
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                const SizedBox(width: 18),
+                Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Text(
+                  'Buscar canciones, artistas o álbumes',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ],
             ),
-            const PlaylistsTab(),
-            SongListView(
-              songs: ref.watch(favoriteSongsProvider),
-              emptyText:
-                  'Toca el corazón en el reproductor para guardar favoritas',
-            ),
-            const FoldersTab(),
-          ],
+          ),
         ),
-        bottomNavigationBar: const MiniPlayer(),
       ),
     );
   }
