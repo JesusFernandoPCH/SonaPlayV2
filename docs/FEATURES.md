@@ -15,7 +15,7 @@ Especificación para V2. La capa de datos/dominio ya está portada; la UI se reh
 - Búsqueda por texto con estado vacío
 - Filtros por artista y álbum
 - Ordenar por título, artista, álbum, duración, fecha (asc/desc) — `SortOption`
-- Escaneo: caché Hive primero, sincronización en segundo plano, parseo en isolate
+- Escaneo: caché Hive primero, sincronización en segundo plano (consulta nativa a MediaStore fuera del hilo de UI, canal `sonaplay/media`)
 
 ## Menú de opciones de canción
 Editar metadatos · agregar a playlist · compartir · velocidad · tono de llamada · temporizador para dormir · ocultar · eliminar (papelera)
@@ -41,9 +41,14 @@ Seleccionar todo con contador · agregar a playlist · reproducir a continuació
 - Recortador de tonos: forma de onda, rango, guardar como tono (canal `sonaplay/ringtone`)
 
 ## Ajustes
-- Archivos ocultos (restaurar) · Eliminado recientemente (restaurar)
+- Archivos ocultos (restaurar) · Eliminado recientemente (restaurar + **eliminar definitivamente**: borra el archivo con confirmación del sistema — `TrashPurger`, hecho en V2)
 - Guardados sin UI en V1: modo OLED, intensidad de cristal, duración mínima, calidad de carátula, color de acento
 
+## Decisiones de diseño V2 (2026-10-18)
+- Estilo: oscuro (casi negro, apto OLED) con acento tomado de la carátula que suena; sin glassmorphism pesado
+- Ecualizador: se implementa con `AndroidEqualizer` de just_audio (bandas + presets)
+- Ajustes: solo los útiles (duración mínima y lo que el estilo necesite); OLED, intensidad de cristal, calidad de carátula y color de acento se eliminan
+
 ## Pendiente en V2
-- Borrado real con MediaStore desde la papelera (canal `sonaplay/media`)
 - Rediseño UI/UX completo
+- Al borrar definitivamente la canción que suena: saltar a la siguiente y quitarla de la cola

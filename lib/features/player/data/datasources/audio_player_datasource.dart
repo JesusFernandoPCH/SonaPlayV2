@@ -26,6 +26,7 @@ class AudioPlayerDataSource {
       _isShuffled ? _shuffledPlaylist : _originalPlaylist;
 
   // Public getters for queue state (FASE 7.2)
+  bool get isShuffled => _isShuffled;
   List<Song> get currentPlaylist => List.unmodifiable(_activePlaylist);
   int? get currentIndex => _activePlaylist.isEmpty ? null : _currentIndex;
 
@@ -211,7 +212,9 @@ class AudioPlayerDataSource {
     _isShuffled = !_isShuffled;
     await _persistence.setShuffleMode(_isShuffled);
 
-    if (_isShuffled) {
+    if (_originalPlaylist.isEmpty) {
+      // Nothing queued yet: only the preference changes
+    } else if (_isShuffled) {
       // Shuffle ON: Create shuffled playlist with current song at start
       final currentSong = _originalPlaylist[_currentIndex];
       _shuffledPlaylist = List.from(_originalPlaylist)..shuffle();
