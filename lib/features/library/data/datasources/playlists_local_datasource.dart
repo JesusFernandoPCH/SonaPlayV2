@@ -37,6 +37,15 @@ class PlaylistsLocalDataSource {
     return models.map((model) => model.toEntity()).toList();
   }
 
+  /// Emits all playlists (newest first) now and after every change
+  Stream<List<Playlist>> watchPlaylists() async* {
+    final box = await _playlistsBox;
+    yield await getAllPlaylists();
+    await for (final _ in box.watch()) {
+      yield await getAllPlaylists();
+    }
+  }
+
   /// Update a playlist
   Future<void> updatePlaylist(Playlist playlist) async {
     final box = await _playlistsBox;
