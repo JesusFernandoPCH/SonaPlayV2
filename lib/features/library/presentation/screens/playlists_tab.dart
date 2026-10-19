@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/features/library/data/datasources/playlists_local_datasource.dart';
 import 'package:sonaplay/features/library/data/repositories/playlists_repository_impl.dart';
 import 'package:sonaplay/features/library/domain/entities/playlist.dart';
 import 'package:sonaplay/features/library/domain/usecases/create_playlist.dart';
@@ -19,7 +20,10 @@ class PlaylistsTab extends ConsumerWidget {
         ListTile(
           leading: const CircleAvatar(child: Icon(Icons.add_rounded)),
           title: const Text('Nueva playlist'),
-          onTap: () => createPlaylistFlow(context, ref),
+          onTap: () => createPlaylistFlow(
+            context,
+            ref.read(playlistsDataSourceProvider),
+          ),
         ),
         if (playlists.isEmpty)
           const CenteredMessage(
@@ -35,7 +39,7 @@ class PlaylistsTab extends ConsumerWidget {
 /// Asks for a name and creates the playlist; returns it (null if cancelled)
 Future<Playlist?> createPlaylistFlow(
   BuildContext context,
-  WidgetRef ref,
+  PlaylistsLocalDataSource dataSource,
 ) async {
   final name = await _askName(
     context,
@@ -43,10 +47,7 @@ Future<Playlist?> createPlaylistFlow(
     action: 'Crear',
   );
   if (name == null) return null;
-  final repository = PlaylistsRepositoryImpl(
-    ref.read(playlistsDataSourceProvider),
-  );
-  return CreatePlaylist(repository)(name);
+  return CreatePlaylist(PlaylistsRepositoryImpl(dataSource))(name);
 }
 
 class _PlaylistTile extends ConsumerWidget {

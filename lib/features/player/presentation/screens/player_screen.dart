@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
+import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 import 'package:sonaplay/features/player/domain/entities/player_state.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/equalizer_screen.dart';
@@ -77,6 +78,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                       tooltip: 'Cola',
                       icon: const Icon(Icons.queue_music_rounded),
                       onPressed: () => _open(const QueueScreen()),
+                    ),
+                    IconButton(
+                      tooltip: 'Opciones de la canción',
+                      icon: const Icon(Icons.more_vert_rounded),
+                      onPressed: () => showSongOptions(context, song),
                     ),
                   ],
                 ),

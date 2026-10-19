@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
+import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 
 class SongTile extends StatelessWidget {
   final Song song;
@@ -26,7 +27,12 @@ class SongTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: isCurrent ? const Icon(Icons.graphic_eq_rounded) : null,
+      // The playing song is marked by the accent color (selected)
+      trailing: IconButton(
+        tooltip: 'Opciones de ${song.title}',
+        icon: const Icon(Icons.more_vert_rounded),
+        onPressed: () => showSongOptions(context, song),
+      ),
     );
   }
 }

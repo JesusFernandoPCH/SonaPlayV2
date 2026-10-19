@@ -1,0 +1,241 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
+import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
+import 'package:sonaplay/features/library/data/services/trash_purger.dart';
+import 'package:sonaplay/features/library/domain/entities/song.dart';
+import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
+import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
+import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
+import 'package:sonaplay/features/settings/data/datasources/settings_local_datasource.dart';
+
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _settings = SettingsLocalDataSource();
+
+  Future<void> _pickMinDuration() async {
+    final seconds = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Ocultar audios más cortos que'),
+        children: [
+          RadioGroup<int>(
+            groupValue: _settings.minDuration,
+            onChanged: (v) => Navigator.pop(dialogContext, v),
+            child: Column(
+              children: [
+                for (final s in const [0, 10, 30, 60, 120])
+                  RadioListTile<int>(
+                    value: s,
+                    title: Text(s == 0 ? 'Mostrar todo' : '$s segundos'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (seconds == null) return;
+    await _settings.setMinDuration(seconds);
+    setState(() {});
+    // The filter is applied while scanning, so scan again
+    ref.invalidate(songsProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hidden = ref.watch(hiddenIdsProvider).value?.length ?? 0;
+    final trashed = ref.watch(trashIdsProvider).value?.length ?? 0;
+    final minDuration = _settings.minDuration;
+    void open(Widget screen) => Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ajustes')),
+      body: ListView(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.visibility_off_rounded),
+            title: const Text('Archivos ocultos'),
+            subtitle: Text(hidden == 1 ? '1 canción' : '$hidden canciones'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => open(const _HiddenSongsScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_outline_rounded),
+            title: const Text('Eliminado recientemente'),
+            subtitle: Text(trashed == 1 ? '1 canción' : '$trashed canciones'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => open(const _TrashScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.timer_outlined),
+            title: const Text('Duración mínima'),
+            subtitle: Text(
+              minDuration == 0
+                  ? 'Se muestran todos los audios'
+                  : 'Se ocultan audios de menos de $minDuration segundos',
+            ),
+            onTap: _pickMinDuration,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Songs whose IDs are in [ids], taken from the full (unfiltered) library
+List<Song> _songsWithIds(WidgetRef ref, List<String>? ids) {
+  final wanted = {...?ids};
+  return [
+    for (final s in ref.watch(songsProvider).value ?? const <Song>[])
+      if (wanted.contains(s.id)) s,
+  ];
+}
+
+class _HiddenSongsScreen extends ConsumerWidget {
+  const _HiddenSongsScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final songs = _songsWithIds(ref, ref.watch(hiddenIdsProvider).value);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Archivos ocultos')),
+      body: songs.isEmpty
+          ? const CenteredMessage(
+              'No hay canciones ocultas',
+              icon: Icons.visibility_rounded,
+            )
+          : ListView(
+              children: [
+                for (final song in songs)
+                  _SongRow(
+                    song: song,
+                    action: TextButton(
+                      onPressed: () =>
+                          HiddenSongsLocalDataSource().unhideSong(song.id),
+                      child: const Text('Mostrar'),
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _TrashScreen extends ConsumerWidget {
+  const _TrashScreen();
+
+  Future<void> _purge(
+    BuildContext context,
+    List<String> ids, {
+    required String question,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(question),
+        content: const Text(
+          'Los archivos se borran del teléfono y no se pueden recuperar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final deleted = await TrashPurger().purge(ids);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          deleted.isEmpty
+              ? 'No se eliminó ningún archivo'
+              : deleted.length == 1
+              ? '1 archivo eliminado del teléfono'
+              : '${deleted.length} archivos eliminados del teléfono',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ids = ref.watch(trashIdsProvider).value ?? const <String>[];
+    final songs = _songsWithIds(ref, ids);
+    final trash = DeletedSongsLocalDataSource();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Eliminado recientemente'),
+        actions: [
+          if (ids.isNotEmpty)
+            TextButton(
+              onPressed: () =>
+                  _purge(context, ids, question: '¿Vaciar la papelera?'),
+              child: const Text('Vaciar'),
+            ),
+        ],
+      ),
+      body: songs.isEmpty
+          ? const CenteredMessage(
+              'La papelera está vacía',
+              icon: Icons.delete_outline_rounded,
+            )
+          : ListView(
+              children: [
+                for (final song in songs)
+                  _SongRow(
+                    song: song,
+                    action: PopupMenuButton<String>(
+                      tooltip: 'Opciones de ${song.title}',
+                      onSelected: (action) => action == 'restore'
+                          ? trash.restoreSong(song.id)
+                          : _purge(context, [
+                              song.id,
+                            ], question: '¿Eliminar "${song.title}"?'),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'restore',
+                          child: Text('Restaurar'),
+                        ),
+                        PopupMenuItem(
+                          value: 'purge',
+                          child: Text('Eliminar definitivamente'),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _SongRow extends StatelessWidget {
+  final Song song;
+  final Widget action;
+  const _SongRow({required this.song, required this.action});
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: Artwork(songId: song.id),
+    title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+    subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+    trailing: action,
+  );
+}

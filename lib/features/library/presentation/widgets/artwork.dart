@@ -10,11 +10,15 @@ class Artwork extends ConsumerWidget {
   /// Loads a sharper image, showing the thumbnail until it arrives
   final bool large;
 
+  /// Square corners, for tiles inside a collage that is rounded as a whole
+  final bool square;
+
   const Artwork({
     super.key,
     required this.songId,
     this.size = 48,
     this.large = false,
+    this.square = false,
   });
 
   @override
@@ -25,7 +29,7 @@ class Artwork extends ConsumerWidget {
         : thumbnail;
     final scheme = Theme.of(context).colorScheme;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.16),
+      borderRadius: BorderRadius.circular(square ? 0 : size * 0.16),
       child: SizedBox.square(
         dimension: size,
         child: bytes != null

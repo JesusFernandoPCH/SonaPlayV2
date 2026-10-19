@@ -33,6 +33,7 @@ class AudioPlayerDataSource {
 
   // Public getters for queue state (FASE 7.2)
   bool get isShuffled => _isShuffled;
+  double get speed => _player.speed;
   List<Song> get currentPlaylist => List.unmodifiable(_activePlaylist);
   int? get currentIndex => _activePlaylist.isEmpty ? null : _currentIndex;
 

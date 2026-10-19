@@ -7,6 +7,7 @@ import 'package:sonaplay/features/library/presentation/screens/search_screen.dar
 import 'package:sonaplay/features/library/presentation/widgets/library_sheets.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
+import 'package:sonaplay/features/settings/presentation/settings_screen.dart';
 
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
@@ -41,6 +42,14 @@ class LibraryScreen extends ConsumerWidget {
               icon: const Icon(Icons.filter_list_rounded),
               selectedIcon: const Icon(Icons.filter_alt_rounded),
               onPressed: () => showFilterSheet(context),
+            ),
+            IconButton(
+              tooltip: 'Ajustes',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              ),
             ),
           ],
           bottom: const TabBar(

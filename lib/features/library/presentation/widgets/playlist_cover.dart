@@ -39,9 +39,7 @@ class PlaylistCover extends StatelessWidget {
           children: [
             for (final song in songs.take(4))
               // Square tiles; the outer clip rounds the collage corners
-              ClipRect(
-                child: Artwork(songId: song.id, size: half),
-              ),
+              Artwork(songId: song.id, size: half, square: true),
           ],
         ),
       ),

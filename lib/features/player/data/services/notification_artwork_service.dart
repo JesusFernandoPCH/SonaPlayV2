@@ -17,6 +17,10 @@ class NotificationArtworkService {
   /// Extracts the artwork through MediaStore and caches it in a temporary
   /// directory to provide a valid 'file://' URI for the system notification.
   Future<Uri?> getArtworkUri(Song song) async {
+    // Artwork chosen in the metadata editor wins over the embedded one
+    final custom = song.artworkPath;
+    if (custom != null && File(custom).existsSync()) return File(custom).uri;
+
     // 1. Manually extract and cache the artwork.
     // We avoid 'content://' URIs as they often lead to permission issues
     // in the system notification area on modern Android versions.
