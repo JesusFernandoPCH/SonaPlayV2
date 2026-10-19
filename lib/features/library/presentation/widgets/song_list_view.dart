@@ -3,10 +3,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/core/motion/motion.dart';
+import 'package:sonaplay/core/presentation/fast_scrollbar.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
+import 'package:sonaplay/features/library/presentation/providers/library_providers.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_tile.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
+import 'package:sonaplay/features/player/presentation/screens/player_screen.dart';
 
 /// Song list with a "count · Reproducir · Aleatorio" header; handles loading,
 /// error and empty states. Used by every tab and detail screen.
@@ -57,6 +60,14 @@ class _ListState extends ConsumerState<_List> {
   /// into view) just show
   final _shownAt = DateTime.now();
 
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
   List<Song> get _songs => widget.songs;
 
   Future<void> _play(int index, {bool? shuffle}) async {
@@ -84,9 +95,43 @@ class _ListState extends ConsumerState<_List> {
   @override
   Widget build(BuildContext context) {
     final currentId = ref.watch(currentSongProvider).value?.id;
+    final view = ref.watch(libraryViewProvider);
     final selecting = _selected.isNotEmpty;
-    final banner = widget.banner;
-    final headerCount = banner == null ? 1 : 2;
+    final animate = DateTime.now().difference(_shownAt) < Motion.slow * 2;
+
+    Widget item(int index) {
+      final song = _songs[index];
+      final isCurrent = song.id == currentId;
+      final checked = selecting ? _selected.contains(song.id) : null;
+      final VoidCallback onTap = selecting
+          ? () => _toggle(song)
+          // The playing song opens the player instead of restarting
+          : isCurrent
+          ? () => Navigator.push(context, PlayerRoute())
+          : () => _play(index);
+      return Entrance(
+        key: ValueKey(song.id),
+        delay: staggerDelay(index),
+        animate: animate,
+        child: view == LibraryView.grid
+            ? SongGridTile(
+                song: song,
+                isCurrent: isCurrent,
+                checked: checked,
+                onTap: onTap,
+                onLongPress: () => _toggle(song),
+              )
+            : SongTile(
+                song: song,
+                isCurrent: isCurrent,
+                compact: view == LibraryView.compact,
+                checked: checked,
+                onTap: onTap,
+                onLongPress: () => _toggle(song),
+              ),
+      );
+    }
+
     return PopScope(
       // Back leaves multi-select before leaving the screen
       canPop: !selecting,
@@ -96,27 +141,36 @@ class _ListState extends ConsumerState<_List> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: ListView.builder(
-              itemCount: _songs.length + headerCount,
-              itemBuilder: (context, i) {
-                if (banner != null && i == 0) return banner;
-                if (i == headerCount - 1) return _header(context);
-                final index = i - headerCount;
-                final song = _songs[index];
-                return Entrance(
-                  key: ValueKey(song.id),
-                  delay: staggerDelay(index),
-                  animate:
-                      DateTime.now().difference(_shownAt) < Motion.slow * 2,
-                  child: SongTile(
-                    song: song,
-                    isCurrent: song.id == currentId,
-                    checked: selecting ? _selected.contains(song.id) : null,
-                    onTap: selecting ? () => _toggle(song) : () => _play(index),
-                    onLongPress: () => _toggle(song),
-                  ),
-                );
-              },
+            child: FastScrollbar(
+              controller: _scroll,
+              child: CustomScrollView(
+                controller: _scroll,
+                slivers: [
+                  if (widget.banner case final banner?)
+                    SliverToBoxAdapter(child: banner),
+                  SliverToBoxAdapter(child: _header(context)),
+                  if (view == LibraryView.grid)
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      sliver: SliverGrid.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
+                              mainAxisSpacing: 4,
+                              crossAxisSpacing: 4,
+                              childAspectRatio: 0.74,
+                            ),
+                        itemCount: _songs.length,
+                        itemBuilder: (_, i) => item(i),
+                      ),
+                    )
+                  else
+                    SliverList.builder(
+                      itemCount: _songs.length,
+                      itemBuilder: (_, i) => item(i),
+                    ),
+                ],
+              ),
             ),
           ),
           // Pinned over the top (not above the list, which would shift the

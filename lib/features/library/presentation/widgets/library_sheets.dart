@@ -22,6 +22,33 @@ void showSortSheet(BuildContext context) => showModalBottomSheet<void>(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: SegmentedButton<LibraryView>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: LibraryView.compact,
+                    icon: Icon(Icons.view_headline_rounded),
+                    label: Text('Compacta'),
+                  ),
+                  ButtonSegment(
+                    value: LibraryView.normal,
+                    icon: Icon(Icons.view_list_rounded),
+                    label: Text('Normal'),
+                  ),
+                  ButtonSegment(
+                    value: LibraryView.grid,
+                    icon: Icon(Icons.grid_view_rounded),
+                    label: Text('Cuadrícula'),
+                  ),
+                ],
+                selected: {ref.watch(libraryViewProvider)},
+                onSelectionChanged: (v) =>
+                    ref.read(libraryViewProvider.notifier).select(v.first),
+              ),
+            ),
+            const Divider(),
             for (final (label, asc, desc) in _sortFields)
               ListTile(
                 title: Text(label),

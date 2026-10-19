@@ -43,6 +43,16 @@ class LibraryScreen extends ConsumerStatefulWidget {
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   var _section = 0;
+  final _pages = PageController();
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int section) =>
+      _pages.animateToPage(section, duration: Motion.slow, curve: Motion.enter);
 
   void _open(Widget screen) =>
       Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
@@ -88,24 +98,28 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           child: _SearchPill(onTap: () => _open(const SearchScreen())),
         ),
       ),
-      // Keeps each section's scroll position when switching
-      body: FadeThroughStack(
-        index: _section,
+      // Swipe sideways between sections; each keeps its scroll position
+      body: PageView(
+        controller: _pages,
+        onPageChanged: (i) => setState(() => _section = i),
         children: [
-          SongListView(
-            songs: ref.watch(librarySongsProvider),
-            emptyText: filtered
-                ? 'Ninguna canción coincide con los filtros'
-                : 'No encontramos canciones en este teléfono',
-            banner: filtered ? _FilterChips(filter: filter) : null,
-          ),
-          const PlaylistsTab(),
-          SongListView(
-            songs: ref.watch(favoriteSongsProvider),
-            emptyText:
-                'Toca el corazón en el reproductor para guardar favoritas',
-          ),
-          const FoldersTab(),
+          for (final page in [
+            SongListView(
+              songs: ref.watch(librarySongsProvider),
+              emptyText: filtered
+                  ? 'Ninguna canción coincide con los filtros'
+                  : 'No encontramos canciones en este teléfono',
+              banner: filtered ? _FilterChips(filter: filter) : null,
+            ),
+            const PlaylistsTab(),
+            SongListView(
+              songs: ref.watch(favoriteSongsProvider),
+              emptyText:
+                  'Toca el corazón en el reproductor para guardar favoritas',
+            ),
+            const FoldersTab(),
+          ])
+            _KeepAlive(child: page),
         ],
       ),
       bottomNavigationBar: Column(
@@ -114,7 +128,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           const MiniPlayer(aboveNavigation: true),
           NavigationBar(
             selectedIndex: _section,
-            onDestinationSelected: (i) => setState(() => _section = i),
+            onDestinationSelected: _goTo,
             destinations: [
               for (final s in _sections)
                 NavigationDestination(
@@ -193,5 +207,26 @@ class _FilterChips extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// Keeps a page alive (and its scroll position) while another is shown
+class _KeepAlive extends StatefulWidget {
+  final Widget child;
+  const _KeepAlive({required this.child});
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

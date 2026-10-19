@@ -111,69 +111,6 @@ class _EntranceState extends State<Entrance>
 Duration staggerDelay(int index) =>
     Duration(milliseconds: 25 * index.clamp(0, 12));
 
-/// Like IndexedStack (keeps every child's state) but the shown child fades
-/// in with a slight zoom: Material's "fade through"
-class FadeThroughStack extends StatefulWidget {
-  final int index;
-  final List<Widget> children;
-
-  const FadeThroughStack({
-    super.key,
-    required this.index,
-    required this.children,
-  });
-
-  @override
-  State<FadeThroughStack> createState() => _FadeThroughStackState();
-}
-
-class _FadeThroughStackState extends State<FadeThroughStack>
-    with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: Motion.medium,
-    value: 1,
-  );
-  late final _curve = CurvedAnimation(parent: _controller, curve: Motion.enter);
-
-  @override
-  void didUpdateWidget(FadeThroughStack old) {
-    super.didUpdateWidget(old);
-    if (old.index != widget.index) _controller.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _curve.dispose();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      for (final (i, child) in widget.children.indexed)
-        // Same wrapper types for every child, so switching keeps their state
-        Offstage(
-          offstage: i != widget.index,
-          child: TickerMode(
-            enabled: i == widget.index,
-            child: FadeTransition(
-              opacity: i == widget.index ? _curve : kAlwaysCompleteAnimation,
-              child: ScaleTransition(
-                scale: i == widget.index
-                    ? Tween(begin: 0.97, end: 1.0).animate(_curve)
-                    : kAlwaysCompleteAnimation,
-                child: child,
-              ),
-            ),
-          ),
-        ),
-    ],
-  );
-}
-
 /// Page transition for the whole app: the new page slides in a short way
 /// while fading, the old one drifts back (a shared X axis)
 class SharedAxisTransition extends StatelessWidget {

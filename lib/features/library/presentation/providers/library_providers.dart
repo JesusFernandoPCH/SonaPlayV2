@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/favorites_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
@@ -73,6 +74,29 @@ class SortNotifier extends Notifier<SortOption> {
   void select(SortOption option) {
     state = option;
     _store.setSortOption(option);
+  }
+}
+
+/// How song lists are laid out: small rows, normal rows or artwork cards
+enum LibraryView { compact, normal, grid }
+
+final libraryViewProvider = NotifierProvider<LibraryViewNotifier, LibraryView>(
+  LibraryViewNotifier.new,
+);
+
+class LibraryViewNotifier extends Notifier<LibraryView> {
+  static const _key = 'library_view';
+  Box get _box => Hive.box('settings_box');
+
+  @override
+  LibraryView build() {
+    final i = _box.get(_key, defaultValue: LibraryView.normal.index) as int;
+    return LibraryView.values[i.clamp(0, LibraryView.values.length - 1)];
+  }
+
+  void select(LibraryView view) {
+    state = view;
+    _box.put(_key, view.index);
   }
 }
 
