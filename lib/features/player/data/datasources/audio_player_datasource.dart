@@ -142,6 +142,11 @@ class AudioPlayerDataSource {
     _emitState();
   }
 
+  bool get playing => _player.playing;
+
+  /// 0 to 1; the sleep timer fades out with it
+  Future<void> setVolume(double volume) => _player.setVolume(volume);
+
   /// Live position, read every frame by the lyrics (the stream ticks slower)
   Duration get position => _player.position;
 

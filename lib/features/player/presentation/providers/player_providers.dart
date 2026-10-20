@@ -58,26 +58,71 @@ final sleepTimerProvider = NotifierProvider<SleepTimerNotifier, DateTime?>(
 );
 
 class SleepTimerNotifier extends Notifier<DateTime?> {
+  static const _fade = Duration(seconds: 15);
   Timer? _timer;
+  StreamSubscription<PlayerState>? _songChange;
+
+  /// Length it was set to, for the countdown ring
+  Duration total = Duration.zero;
 
   @override
   DateTime? build() {
-    ref.onDispose(() => _timer?.cancel());
+    ref.onDispose(_stop);
     return null;
   }
 
-  void start(Duration duration) {
-    _timer?.cancel();
-    _timer = Timer(duration, () {
-      ref.read(audioHandlerProvider).audioPlayer.pause();
-      state = null;
+  /// Turns the volume down over the last seconds, then pauses. With
+  /// [endOfSong] it pauses when the track changes instead, since a pause right
+  /// at the end races the move to the next song.
+  void start(Duration duration, {bool endOfSong = false}) {
+    _stop();
+    total = duration;
+    final ends = DateTime.now().add(duration);
+    state = ends;
+    final player = ref.read(audioHandlerProvider).audioPlayer;
+    if (endOfSong) {
+      // Once the next song is actually playing (it's announced before it
+      // loads, and loading starts it), pause it and rewind
+      final songId = player.getCurrentSong()?.id;
+      _songChange = player.playerStateStream.listen((playing) {
+        if (playing.isPlaying && player.getCurrentSong()?.id != songId) {
+          _finish(rewind: true);
+        }
+      });
+    }
+    _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      final left = ends.difference(DateTime.now());
+      if (left > _fade) return;
+      if (left > Duration.zero) {
+        player.setVolume(left.inMilliseconds / _fade.inMilliseconds);
+      } else if (!endOfSong || left < -const Duration(seconds: 3)) {
+        _finish();
+      }
     });
-    state = DateTime.now().add(duration);
+  }
+
+  Future<void> _finish({bool rewind = false}) async {
+    _stop();
+    state = null;
+    final player = ref.read(audioHandlerProvider).audioPlayer;
+    await player.pause();
+    if (rewind) await player.seek(Duration.zero);
+    // A track change in flight can start playback again right after
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (player.playing) await player.pause();
+    await player.setVolume(1);
+  }
+
+  void _stop() {
+    _timer?.cancel();
+    _songChange?.cancel();
+    _songChange = null;
   }
 
   void cancel() {
-    _timer?.cancel();
+    _stop();
     state = null;
+    ref.read(audioHandlerProvider).audioPlayer.setVolume(1);
   }
 }
 

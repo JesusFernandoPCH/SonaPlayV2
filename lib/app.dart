@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/core/presentation/permission_gate.dart';
 import 'package:sonaplay/core/theme/app_theme.dart';
@@ -18,6 +19,10 @@ class SonaPlayApp extends ConsumerWidget {
       navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(accent),
+      // System texts (pickers, tooltips) in Spanish
+      locale: const Locale('es'),
+      supportedLocales: const [Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const PermissionGate(),
     );
   }

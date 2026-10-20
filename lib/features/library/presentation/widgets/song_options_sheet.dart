@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sonaplay/features/player/presentation/screens/sleep_timer_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
@@ -97,7 +98,7 @@ class _SongOptions extends ConsumerWidget {
               'Temporizador para dormir',
               () {
                 close();
-                pickSleepTimer(host, container);
+                pickSleepTimer(host);
               },
               detail: sleepEnds == null
                   ? null
@@ -319,39 +320,4 @@ Future<void> _pickSpeed(BuildContext context, ProviderContainer ref) async {
     ),
   );
   if (speed != null) await player.setSpeed(speed);
-}
-
-const _sleepMinutes = [15, 30, 45, 60, 90];
-
-Future<void> pickSleepTimer(BuildContext context, ProviderContainer ref) async {
-  final timer = ref.read(sleepTimerProvider.notifier);
-  final active = ref.read(sleepTimerProvider) != null;
-  final minutes = await showDialog<int>(
-    context: context,
-    builder: (dialogContext) => SimpleDialog(
-      title: const Text('Pausar la música en'),
-      children: [
-        for (final m in _sleepMinutes)
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(dialogContext, m),
-            child: Text('$m minutos'),
-          ),
-        if (active)
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(dialogContext, 0),
-            child: const Text('Desactivar temporizador'),
-          ),
-      ],
-    ),
-  );
-  if (minutes == null) return;
-  minutes == 0 ? timer.cancel() : timer.start(Duration(minutes: minutes));
-  if (context.mounted) {
-    _notify(
-      context,
-      minutes == 0
-          ? 'Temporizador desactivado'
-          : 'La música se pausará en $minutes minutos',
-    );
-  }
 }

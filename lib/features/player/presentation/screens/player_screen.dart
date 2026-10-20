@@ -11,6 +11,7 @@ import 'package:sonaplay/features/player/domain/entities/player_state.dart';
 import 'package:sonaplay/features/player/presentation/player_route.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/equalizer_screen.dart';
+import 'package:sonaplay/features/player/presentation/screens/sleep_timer_screen.dart';
 import 'package:sonaplay/features/player/presentation/widgets/lyrics_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/queue_list.dart';
 import 'package:sonaplay/core/presentation/app_icons.dart';
@@ -239,13 +240,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                                   : TimeOfDay.fromDateTime(sleepEnds)
                                         .format(context),
                               active: sleepEnds != null,
-                              onPressed: () => pickSleepTimer(
-                                context,
-                                ProviderScope.containerOf(
-                                  context,
-                                  listen: false,
-                                ),
-                              ),
+                              onPressed: () => pickSleepTimer(context),
                             ),
                             _BottomAction(
                               icon: AppIcons.lyrics,
