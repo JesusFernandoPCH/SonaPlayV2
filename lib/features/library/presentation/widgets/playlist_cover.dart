@@ -29,8 +29,8 @@ class PlaylistCover extends StatelessWidget {
         ),
       );
     }
-    // Big covers load the sharper artwork
-    final large = size > 100;
+    // Sharper artwork only for big tiles; a collage tile is half the cover
+    final large = (songs.length < 4 ? size : size / 2) > 100;
     if (songs.length < 4) {
       return Artwork(songId: songs.first.id, size: size, large: large);
     }

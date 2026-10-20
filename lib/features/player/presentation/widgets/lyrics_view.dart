@@ -1,5 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/core/presentation/app_icons.dart';
@@ -52,9 +54,8 @@ class _Synced extends ConsumerStatefulWidget {
   ConsumerState<_Synced> createState() => _SyncedState();
 }
 
-class _SyncedState extends ConsumerState<_Synced>
-    with SingleTickerProviderStateMixin {
-  late final Ticker _ticker;
+class _SyncedState extends ConsumerState<_Synced> {
+  late final Timer _poll;
   final _scroll = ScrollController();
   late final _keys = [for (final _ in widget.lines) GlobalKey()];
   var _line = -1;
@@ -66,9 +67,10 @@ class _SyncedState extends ConsumerState<_Synced>
   @override
   void initState() {
     super.initState();
-    // Reads the live position every frame, so words light up on time; only
-    // rebuilds when the line or the lit word changes
-    _ticker = createTicker((_) {
+    // Reads the live position 20 times a second and rebuilds only when the
+    // line or the lit word changes. A per-frame ticker would keep the screen
+    // redrawing the whole time the lyrics are open.
+    _poll = Timer.periodic(const Duration(milliseconds: 50), (_) {
       final position = ref.read(audioHandlerProvider).audioPlayer.position;
       final line = lineAt(widget.lines, position);
       final lit = line < 0
@@ -84,7 +86,7 @@ class _SyncedState extends ConsumerState<_Synced>
         _lit = lit;
       });
       if (moved) _follow();
-    })..start();
+    });
   }
 
   void _follow({bool jump = false}) {
@@ -101,7 +103,7 @@ class _SyncedState extends ConsumerState<_Synced>
 
   @override
   void dispose() {
-    _ticker.dispose();
+    _poll.cancel();
     _scroll.dispose();
     super.dispose();
   }

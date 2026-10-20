@@ -4,7 +4,9 @@ import 'dart:ui';
 import 'package:audio_service/audio_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -71,7 +73,30 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  if (kProfileMode) _logFrameTimes();
   runApp(const ProviderScope(child: SonaPlayApp()));
   // In the background: the fetch can take seconds and must not delay startup
   unawaited(checkForRequiredUpdate(appNavigatorKey));
+}
+
+/// Profile builds only: every 120 frames, logs how long they took, to find
+/// jank on a real phone (adb logcat | grep frames)
+void _logFrameTimes() {
+  final frames = <FrameTiming>[];
+  SchedulerBinding.instance.addTimingsCallback((timings) {
+    frames.addAll(timings);
+    if (frames.length < 120) return;
+    double ms(Duration d) => d.inMicroseconds / 1000;
+    final build = frames.map((f) => ms(f.buildDuration)).toList()..sort();
+    final raster = frames.map((f) => ms(f.rasterDuration)).toList()..sort();
+    final slow = frames.where((f) => ms(f.totalSpan) > 16.7).length;
+    debugPrint(
+      'frames: build avg ${(build.reduce((a, b) => a + b) / build.length).toStringAsFixed(1)} '
+      'p99 ${build[(build.length * 0.99).floor()].toStringAsFixed(1)} · '
+      'raster avg ${(raster.reduce((a, b) => a + b) / raster.length).toStringAsFixed(1)} '
+      'p99 ${raster[(raster.length * 0.99).floor()].toStringAsFixed(1)} · '
+      'over 16.7 ms: $slow/${frames.length}',
+    );
+    frames.clear();
+  });
 }
