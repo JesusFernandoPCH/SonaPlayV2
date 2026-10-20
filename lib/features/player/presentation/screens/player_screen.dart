@@ -175,17 +175,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Shuffle and repeat live in the queue, where the
+                        // new order shows
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            _ModeButton(
-                              active: state.isShuffled,
-                              tooltip: state.isShuffled
-                                  ? 'Aleatorio activado'
-                                  : 'Aleatorio desactivado',
-                              icon: AppIcons.shuffle,
-                              onPressed: player.toggleShuffle,
-                            ),
                             IconButton(
                               tooltip: 'Anterior',
                               iconSize: 40,
@@ -226,24 +220,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                               iconSize: 40,
                               icon: const AppIcon(AppIcons.next, filled: true),
                               onPressed: player.skipToNext,
-                            ),
-                            _ModeButton(
-                              active: state.repeatMode != RepeatMode.off,
-                              tooltip: switch (state.repeatMode) {
-                                RepeatMode.all => 'Repetir todas',
-                                RepeatMode.one => 'Repetir una',
-                                RepeatMode.off => 'Repetir desactivado',
-                              },
-                              icon: state.repeatMode == RepeatMode.one
-                                  ? AppIcons.repeatOne
-                                  : AppIcons.repeat,
-                              onPressed: () => player.setRepeatMode(
-                                switch (state.repeatMode) {
-                                  RepeatMode.all => RepeatMode.one,
-                                  RepeatMode.one => RepeatMode.off,
-                                  RepeatMode.off => RepeatMode.all,
-                                },
-                              ),
                             ),
                           ],
                         ),
@@ -554,12 +530,9 @@ class _QueuePanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(playerStateProvider);
-    final count = ref
-        .watch(audioHandlerProvider)
-        .audioPlayer
-        .currentPlaylist
-        .length;
+    final state = ref.watch(playerStateProvider).value ?? const PlayerState();
+    final player = ref.watch(audioHandlerProvider).audioPlayer;
+    final count = player.currentPlaylist.length;
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow.withValues(alpha: 0.94),
@@ -569,11 +542,42 @@ class _QueuePanel extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-            child: Text(
-              count == 1 ? 'Cola · 1 canción' : 'Cola · $count canciones',
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w800),
+            padding: const EdgeInsets.fromLTRB(20, 10, 12, 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    count == 1 ? 'Cola · 1 canción' : 'Cola · $count canciones',
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                _ModeButton(
+                  active: state.isShuffled,
+                  tooltip: state.isShuffled
+                      ? 'Aleatorio activado'
+                      : 'Aleatorio desactivado',
+                  icon: AppIcons.shuffle,
+                  onPressed: player.toggleShuffle,
+                ),
+                _ModeButton(
+                  active: state.repeatMode != RepeatMode.off,
+                  tooltip: switch (state.repeatMode) {
+                    RepeatMode.all => 'Repetir todas',
+                    RepeatMode.one => 'Repetir una',
+                    RepeatMode.off => 'Repetir desactivado',
+                  },
+                  icon: state.repeatMode == RepeatMode.one
+                      ? AppIcons.repeatOne
+                      : AppIcons.repeat,
+                  onPressed: () =>
+                      player.setRepeatMode(switch (state.repeatMode) {
+                        RepeatMode.all => RepeatMode.one,
+                        RepeatMode.one => RepeatMode.off,
+                        RepeatMode.off => RepeatMode.all,
+                      }),
+                ),
+              ],
             ),
           ),
           const Expanded(child: QueueList()),

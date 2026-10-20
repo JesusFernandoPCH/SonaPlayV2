@@ -55,7 +55,10 @@ final visibleSongsProvider = Provider<AsyncValue<List<Song>>>((ref) {
   return ref
       .watch(songsProvider)
       .whenData(
-        (songs) => songs.where((s) => !excluded.contains(s.id)).toList(),
+        (songs) => [
+          for (final s in songs)
+            if (!excluded.contains(s.id) && !isChatAudio(s)) s,
+        ],
       );
 });
 
@@ -100,40 +103,14 @@ class LibraryViewNotifier extends Notifier<LibraryView> {
   }
 }
 
-typedef LibraryFilter = ({String? artist, String? album});
-
-final libraryFilterProvider = NotifierProvider<FilterNotifier, LibraryFilter>(
-  FilterNotifier.new,
-);
-
-class FilterNotifier extends Notifier<LibraryFilter> {
-  final _store = PlaybackPersistenceDataSource();
-
-  @override
-  LibraryFilter build() =>
-      (artist: _store.selectedArtist, album: _store.selectedAlbum);
-
-  void apply(LibraryFilter filter) {
-    state = filter;
-    _store.setSelectedArtist(filter.artist);
-    _store.setSelectedAlbum(filter.album);
-  }
-}
-
 // ========== Lists behind each tab ==========
 
-/// "Canciones" tab: visible songs, filtered and sorted
+/// "Canciones" tab: visible songs, sorted
 final librarySongsProvider = Provider<AsyncValue<List<Song>>>((ref) {
   final sort = ref.watch(sortOptionProvider);
-  final filter = ref.watch(libraryFilterProvider);
   return ref
       .watch(visibleSongsProvider)
-      .whenData(
-        (songs) => sortSongs(
-          filterSongs(songs, artist: filter.artist, album: filter.album),
-          sort,
-        ),
-      );
+      .whenData((songs) => sortSongs(songs, sort));
 });
 
 final favoriteSongsProvider = Provider<AsyncValue<List<Song>>>((ref) {

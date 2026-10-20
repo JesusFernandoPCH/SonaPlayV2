@@ -69,4 +69,22 @@ void main() {
       expect(searchLibrary(library, '  ').artists, isEmpty);
     },
   );
+
+  test('WhatsApp audios are recognised by name or folder', () {
+    expect(
+      isChatAudio(_song('AUD-20260701-WA0006', title: 'AUD-20260701-WA0006')),
+      isTrue,
+    );
+    expect(isChatAudio(_song('PTT-20250101-WA0001')), isTrue);
+    expect(
+      isChatAudio(
+        _song(
+          'x',
+          dir: '/sdcard/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Audio',
+        ),
+      ),
+      isTrue,
+    );
+    expect(isChatAudio(_song('Audio Track', title: 'AUD me')), isFalse);
+  });
 }

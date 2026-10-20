@@ -4,6 +4,17 @@ import 'package:sonaplay/features/library/domain/entities/sort_option.dart';
 
 /// Pure list operations behind the library screens (sort, filter, search, folders)
 
+final _chatAudioName = RegExp(r'^(AUD|PTT)-\d{8}-WA\d+', caseSensitive: false);
+
+/// WhatsApp voice notes and audios ("AUD-20260701-WA0006"), which aren't music
+bool isChatAudio(Song song) {
+  final path = song.filePath.toLowerCase();
+  final name = path.substring(path.lastIndexOf('/') + 1);
+  return path.contains('/com.whatsapp/') ||
+      _chatAudioName.hasMatch(song.title) ||
+      _chatAudioName.hasMatch(name);
+}
+
 List<Song> sortSongs(List<Song> songs, SortOption option) {
   int text(String? a, String? b) =>
       (a ?? '').toLowerCase().compareTo((b ?? '').toLowerCase());

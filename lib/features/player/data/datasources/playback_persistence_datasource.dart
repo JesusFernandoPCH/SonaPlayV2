@@ -9,8 +9,6 @@ class PlaybackPersistenceDataSource {
   static const String kShuffleMode = 'shuffle_mode';
   static const String kRepeatMode = 'repeat_mode';
   static const String kSortOption = 'sort_option';
-  static const String kSelectedArtist = 'selected_artist';
-  static const String kSelectedAlbum = 'selected_album';
 
   Box get _box => Hive.box(boxName);
 
@@ -28,7 +26,7 @@ class PlaybackPersistenceDataSource {
   Future<void> setRepeatMode(RepeatMode value) =>
       _box.put(kRepeatMode, value.name);
 
-  // Filter Settings
+  // Sort
   SortOption get sortOption {
     final optionName = _box.get(
       kSortOption,
@@ -40,13 +38,6 @@ class PlaybackPersistenceDataSource {
     );
   }
 
-  String? get selectedArtist => _box.get(kSelectedArtist);
-  String? get selectedAlbum => _box.get(kSelectedAlbum);
-
   Future<void> setSortOption(SortOption value) =>
       _box.put(kSortOption, value.name);
-  Future<void> setSelectedArtist(String? value) =>
-      _box.put(kSelectedArtist, value);
-  Future<void> setSelectedAlbum(String? value) =>
-      _box.put(kSelectedAlbum, value);
 }
