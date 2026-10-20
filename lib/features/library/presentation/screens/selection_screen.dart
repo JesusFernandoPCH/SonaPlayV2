@@ -91,6 +91,16 @@ class _SelectionScreenState extends ConsumerState<SelectionScreen> {
           ),
         ),
         actions: [
+          // One song: everything the old row menu offered
+          if (count == 1)
+            IconButton(
+              tooltip: 'Más opciones',
+              icon: const AppIcon(AppIcons.more),
+              onPressed: () => showSongOptions(
+                context,
+                widget.songs.firstWhere((s) => s.id == _selected.first),
+              ),
+            ),
           TextButton(
             onPressed: () => setState(
               () => all

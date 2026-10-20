@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sonaplay/core/motion/motion.dart';
@@ -68,13 +66,8 @@ class _ListState extends ConsumerState<_List> {
 
   List<Song> get _songs => widget.songs;
 
-  Future<void> _play(int index, {bool? shuffle}) async {
-    final handler = ref.read(audioHandlerProvider);
-    await handler.playSong(_songs[index], _songs, index);
-    if (shuffle != null && handler.audioPlayer.isShuffled != shuffle) {
-      await handler.audioPlayer.toggleShuffle();
-    }
-  }
+  Future<void> _play(int index) =>
+      ref.read(audioHandlerProvider).playSong(_songs[index], _songs, index);
 
   /// Long press: multi-select on its own screen, at the same scroll position
   void _select(Song song) => Navigator.push(
@@ -129,7 +122,6 @@ class _ListState extends ConsumerState<_List> {
         slivers: [
           if (widget.banner case final banner?)
             SliverToBoxAdapter(child: banner),
-          SliverToBoxAdapter(child: _header(context)),
           if (view == LibraryView.grid)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -153,32 +145,6 @@ class _ListState extends ConsumerState<_List> {
       ),
     );
   }
-
-  Widget _header(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            _songs.length == 1 ? '1 canción' : '${_songs.length} canciones',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-        ),
-        FilledButton.icon(
-          onPressed: () => _play(0, shuffle: false),
-          icon: const AppIcon(AppIcons.play, filled: true),
-          label: const Text('Reproducir'),
-        ),
-        const SizedBox(width: 8),
-        OutlinedButton.icon(
-          onPressed: () =>
-              _play(Random().nextInt(_songs.length), shuffle: true),
-          icon: const AppIcon(AppIcons.shuffle),
-          label: const Text('Aleatorio'),
-        ),
-      ],
-    ),
-  );
 }
 
 class CenteredMessage extends StatelessWidget {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sonaplay/core/motion/motion.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/library/presentation/widgets/artwork.dart';
-import 'package:sonaplay/features/library/presentation/widgets/song_options_sheet.dart';
 import 'package:sonaplay/core/presentation/app_icons.dart';
 
 class SongTile extends StatelessWidget {
@@ -42,12 +41,8 @@ class SongTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        // The playing song is marked by the accent color (selected)
-        trailing: IconButton(
-          tooltip: 'Opciones de ${song.title}',
-          icon: const AppIcon(AppIcons.more),
-          onPressed: () => showSongOptions(context, song),
-        ),
+        // The playing song is marked by the accent color (selected); options
+        // are on long press, so rows keep the full width for the title
       ),
     );
   }
@@ -137,16 +132,6 @@ class SongGridTile extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    SizedBox.square(
-                      dimension: 40,
-                      child: IconButton(
-                        tooltip: 'Opciones de ${song.title}',
-                        padding: EdgeInsets.zero,
-                        iconSize: 20,
-                        icon: const AppIcon(AppIcons.more),
-                        onPressed: () => showSongOptions(context, song),
                       ),
                     ),
                   ],

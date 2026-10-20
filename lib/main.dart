@@ -42,6 +42,7 @@ void main() async {
   await Hive.openBox<SongModel>('cached_songs');
   await Hive.openBox('settings_box');
   await Hive.openBox('playback_settings_box');
+  await Hive.openBox('play_counts');
 
   // Foreground service that survives the app being removed from Recents
   audioHandler = await AudioService.init(

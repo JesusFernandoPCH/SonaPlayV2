@@ -24,6 +24,7 @@ abstract final class AppIcons {
   static const speed = HugeIcons.strokeRoundedDashboardSpeed01;
   static const ringtone = HugeIcons.strokeRoundedCallRinging01;
   static const nowPlaying = HugeIcons.strokeRoundedAudioWave01;
+  static const sparkles = HugeIcons.strokeRoundedSparkles;
 
   // Library
   static const music = HugeIcons.strokeRoundedMusicNote01;

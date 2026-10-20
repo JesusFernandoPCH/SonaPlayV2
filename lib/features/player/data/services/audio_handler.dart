@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:sonaplay/features/library/data/datasources/favorites_local_datasource.dart';
 import 'package:sonaplay/features/library/domain/entities/song.dart';
 import 'package:sonaplay/features/player/data/datasources/audio_player_datasource.dart';
@@ -26,6 +27,9 @@ class SonaPlayAudioHandler extends BaseAudioHandler
   PlayerState _lastState = const PlayerState();
   Set<String> _favoriteIds = {};
 
+  /// Song already counted as played this time around (by song ID)
+  String? _countedId;
+
   // Multi-tap detection for wired headphones
   Timer? _clickTimer;
   int _clickCount = 0;
@@ -44,6 +48,7 @@ class SonaPlayAudioHandler extends BaseAudioHandler
     // Listen to current song changes
     _currentSongSubscription = audioPlayer.currentSongStream.listen((song) {
       if (song != null) {
+        _countedId = null;
         _updateMediaItem(song);
         _updatePlaybackState(_lastState);
       }
@@ -79,6 +84,7 @@ class SonaPlayAudioHandler extends BaseAudioHandler
   void _updatePlaybackState(PlayerState state) {
     _lastState = state;
     final songId = audioPlayer.getCurrentSong()?.id;
+    _countPlay(songId, state);
     final isFavorite = songId != null && _favoriteIds.contains(songId);
     playbackState.add(
       playbackState.value.copyWith(
@@ -129,6 +135,20 @@ class SonaPlayAudioHandler extends BaseAudioHandler
         updatePosition: state.position,
       ),
     );
+  }
+
+  /// A song counts as played after 30 s, or half of it if shorter.
+  /// ponytail: repeat-one loops count once, reset on position if that matters
+  void _countPlay(String? songId, PlayerState state) {
+    if (songId == null || songId == _countedId) return;
+    final half = state.duration ~/ 2;
+    final threshold = half > Duration.zero && half < const Duration(seconds: 30)
+        ? half
+        : const Duration(seconds: 30);
+    if (state.position < threshold) return;
+    _countedId = songId;
+    final plays = Hive.box('play_counts');
+    plays.put(songId, (plays.get(songId, defaultValue: 0) as int) + 1);
   }
 
   /// Update media item (notification metadata)

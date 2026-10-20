@@ -5,6 +5,7 @@ import 'package:sonaplay/features/library/presentation/providers/library_provide
 import 'package:sonaplay/features/library/presentation/screens/folders_tab.dart';
 import 'package:sonaplay/features/library/presentation/screens/playlists_tab.dart';
 import 'package:sonaplay/features/library/presentation/screens/search_screen.dart';
+import 'package:sonaplay/features/library/presentation/widgets/daily_card.dart';
 import 'package:sonaplay/features/library/presentation/widgets/library_sheets.dart';
 import 'package:sonaplay/features/library/presentation/widgets/song_list_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/mini_player.dart';
@@ -47,6 +48,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final filter = ref.watch(libraryFilterProvider);
     final filtered = filter.artist != null || filter.album != null;
     final onSongs = _section == 0;
+    final librarySongs = ref.watch(librarySongsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -90,11 +92,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         children: [
           for (final page in [
             SongListView(
-              songs: ref.watch(librarySongsProvider),
+              songs: librarySongs,
               emptyText: filtered
                   ? 'Ninguna canción coincide con los filtros'
                   : 'No encontramos canciones en este teléfono',
-              banner: filtered ? _FilterChips(filter: filter) : null,
+              banner: filtered
+                  ? _FilterChips(filter: filter)
+                  : DailyCard(songs: librarySongs.value ?? const []),
             ),
             const PlaylistsTab(),
             SongListView(
