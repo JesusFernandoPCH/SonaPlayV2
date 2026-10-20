@@ -26,6 +26,9 @@ abstract final class AppIcons {
   static const nowPlaying = HugeIcons.strokeRoundedAudioWave01;
   static const sparkles = HugeIcons.strokeRoundedSparkles;
   static const lyrics = HugeIcons.strokeRoundedMicVocal;
+  static const user = HugeIcons.strokeRoundedUser;
+  static const legal = HugeIcons.strokeRoundedLegalDocument01;
+  static const privacy = HugeIcons.strokeRoundedShieldCheck;
 
   // Library
   static const music = HugeIcons.strokeRoundedMusicNote01;

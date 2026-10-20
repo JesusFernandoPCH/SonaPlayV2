@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:sonaplay/core/legal/legal.dart';
 import 'package:sonaplay/features/library/data/datasources/deleted_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/datasources/hidden_songs_local_datasource.dart';
 import 'package:sonaplay/features/library/data/services/trash_purger.dart';
@@ -52,8 +54,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(songsProvider);
   }
 
+  Box get _box => Hive.box('settings_box');
+
+  /// The name the daily card greets with; empty removes it
+  Future<void> _editName() async {
+    final controller = TextEditingController(
+      text: _box.get('user_name') as String?,
+    );
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Tu nombre'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 24,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            hintText: 'Cómo quieres que te salude',
+          ),
+          onSubmitted: (v) => Navigator.pop(dialog, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, controller.text),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null) return;
+    name.trim().isEmpty
+        ? await _box.delete('user_name')
+        : await _box.put('user_name', name.trim());
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
+    final userName = _box.get('user_name') as String?;
     final hidden = ref.watch(hiddenIdsProvider).value?.length ?? 0;
     final trashed = ref.watch(trashIdsProvider).value?.length ?? 0;
     final minDuration = _settings.minDuration;
@@ -78,6 +122,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         children: [
           header('Personalización'),
+          ListTile(
+            leading: const AppIcon(AppIcons.user),
+            title: const Text('Tu nombre'),
+            subtitle: Text(userName ?? 'Sin nombre'),
+            onTap: _editName,
+          ),
           ListTile(
             leading: const AppIcon(AppIcons.palette),
             title: const Text('Apariencia'),
@@ -120,6 +170,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 snap.hasData ? 'Versión ${snap.data!.version}' : '',
               ),
             ),
+          ),
+          ListTile(
+            leading: const AppIcon(AppIcons.legal),
+            title: const Text('Términos y Condiciones'),
+            trailing: const AppIcon(AppIcons.chevronRight),
+            onTap: () => openLegal(context, privacy: false),
+          ),
+          ListTile(
+            leading: const AppIcon(AppIcons.privacy),
+            title: const Text('Aviso de Privacidad'),
+            trailing: const AppIcon(AppIcons.chevronRight),
+            onTap: () => openLegal(context, privacy: true),
           ),
         ],
       ),

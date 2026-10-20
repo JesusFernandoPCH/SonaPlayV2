@@ -33,17 +33,14 @@ class AppearanceScreen extends ConsumerWidget {
       ),
     );
 
-    final customImage =
-        a.kind == BackgroundKind.image &&
-        a.imagePath != null &&
-        !a.imagePath!.startsWith('asset:');
+    final customImage = a.kind == BackgroundKind.image;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Apariencia')),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          const _Preview(),
+          const AppearancePreview(),
           header('Fondo'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -52,7 +49,7 @@ class AppearanceScreen extends ConsumerWidget {
               runSpacing: 12,
               children: [
                 for (final (i, color) in kBackgroundColors.indexed)
-                  _Swatch(
+                  Swatch(
                     label: 'Color ${i + 1}',
                     selected:
                         a.kind == BackgroundKind.color && a.colorIndex == i,
@@ -62,45 +59,7 @@ class AppearanceScreen extends ConsumerWidget {
                           a.copyWith(kind: BackgroundKind.color, colorIndex: i),
                     ),
                   ),
-                for (final (i, colors) in kBackgroundGradients.indexed)
-                  _Swatch(
-                    label: 'Degradado ${i + 1}',
-                    selected:
-                        a.kind == BackgroundKind.gradient &&
-                        a.gradientIndex == i,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: colors,
-                      ),
-                    ),
-                    onTap: () => notifier.update(
-                      (a) => a.copyWith(
-                        kind: BackgroundKind.gradient,
-                        gradientIndex: i,
-                      ),
-                    ),
-                  ),
-                for (final asset in kBackgroundAssets)
-                  _Swatch(
-                    label: 'Ondas',
-                    selected:
-                        a.kind == BackgroundKind.image && a.imagePath == asset,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(asset.substring(6)),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    onTap: () => notifier.update(
-                      (a) => a.copyWith(
-                        kind: BackgroundKind.image,
-                        imagePath: asset,
-                      ),
-                    ),
-                  ),
-                _Swatch(
+                Swatch(
                   label: 'Elegir de la galería',
                   selected: customImage,
                   decoration: BoxDecoration(
@@ -157,7 +116,7 @@ class AppearanceScreen extends ConsumerWidget {
                 runSpacing: 12,
                 children: [
                   for (final (i, color) in kAccentColors.indexed)
-                    _Swatch(
+                    Swatch(
                       label: 'Acento ${i + 1}',
                       circle: true,
                       selected: a.accentIndex == i,
@@ -175,8 +134,8 @@ class AppearanceScreen extends ConsumerWidget {
 }
 
 /// A phone-shaped sample of the current background, accent and text
-class _Preview extends StatelessWidget {
-  const _Preview();
+class AppearancePreview extends StatelessWidget {
+  const AppearancePreview({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +228,7 @@ class _Preview extends StatelessWidget {
   }
 }
 
-class _Swatch extends StatelessWidget {
+class Swatch extends StatelessWidget {
   final String label;
   final bool selected;
   final BoxDecoration decoration;
@@ -277,7 +236,8 @@ class _Swatch extends StatelessWidget {
   final Widget? child;
   final bool circle;
 
-  const _Swatch({
+  const Swatch({
+    super.key,
     required this.label,
     required this.selected,
     required this.decoration,
