@@ -142,6 +142,9 @@ class AudioPlayerDataSource {
     _emitState();
   }
 
+  /// Live position, read every frame by the lyrics (the stream ticks slower)
+  Duration get position => _player.position;
+
   /// Seek to position
   Future<void> seek(Duration position) async {
     await _player.seek(position);

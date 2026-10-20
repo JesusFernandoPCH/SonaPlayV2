@@ -11,6 +11,7 @@ import 'package:sonaplay/features/player/domain/entities/player_state.dart';
 import 'package:sonaplay/features/player/presentation/player_route.dart';
 import 'package:sonaplay/features/player/presentation/providers/player_providers.dart';
 import 'package:sonaplay/features/player/presentation/screens/equalizer_screen.dart';
+import 'package:sonaplay/features/player/presentation/widgets/lyrics_view.dart';
 import 'package:sonaplay/features/player/presentation/widgets/queue_list.dart';
 import 'package:sonaplay/core/presentation/app_icons.dart';
 
@@ -21,12 +22,14 @@ class PlayerScreen extends ConsumerStatefulWidget {
   ConsumerState<PlayerScreen> createState() => _PlayerScreenState();
 }
 
+enum _Panel { queue, lyrics }
+
 class _PlayerScreenState extends ConsumerState<PlayerScreen>
     with SingleTickerProviderStateMixin {
   /// Slider position while the user drags, so it doesn't jump back
   double? _dragMs;
 
-  /// 0: player, 1: queue on top with the player collapsed to a bar
+  /// 0: player, 1: queue or lyrics on top with the player collapsed to a bar
   late final _queue = AnimationController(vsync: this, duration: Motion.slow);
   late final _queueCurve = CurvedAnimation(
     parent: _queue,
@@ -35,9 +38,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   );
   var _queueOpen = false;
 
-  void _showQueue(bool open) {
-    setState(() => _queueOpen = open);
-    open ? _queue.forward() : _queue.reverse();
+  /// What the panel shows; kept while it slides away
+  var _panel = _Panel.queue;
+
+  void _showPanel(_Panel? panel) {
+    setState(() {
+      _queueOpen = panel != null;
+      if (panel != null) _panel = panel;
+    });
+    panel != null ? _queue.forward() : _queue.reverse();
   }
 
   @override
@@ -68,7 +77,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       // Back closes the queue first
       canPop: !_queueOpen,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _showQueue(false);
+        if (!didPop) _showPanel(null);
       },
       child: Scaffold(
         body: Stack(
@@ -263,9 +272,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                               ),
                             ),
                             _BottomAction(
+                              icon: AppIcons.lyrics,
+                              label: 'Letra',
+                              onPressed: () => _showPanel(_Panel.lyrics),
+                            ),
+                            _BottomAction(
                               icon: AppIcons.queue,
                               label: 'Cola',
-                              onPressed: () => _showQueue(true),
+                              onPressed: () => _showPanel(_Panel.queue),
                             ),
                           ],
                         ),
@@ -289,15 +303,18 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                         child: Transform.translate(
                           offset: Offset(0, -24 * (1 - t)),
                           child: _CollapsedPlayer(
-                            onExpand: () => _showQueue(false),
+                            onExpand: () => _showPanel(null),
                           ),
                         ),
                       ),
                       Expanded(
-                        // Rises from the bottom, where the Cola button is
+                        // Rises from the bottom, where its button is
                         child: FractionalTranslation(
                           translation: Offset(0, 1 - t),
-                          child: const _QueuePanel(),
+                          child: switch (_panel) {
+                            _Panel.queue => const _QueuePanel(),
+                            _Panel.lyrics => const LyricsView(),
+                          },
                         ),
                       ),
                     ],
@@ -392,13 +409,32 @@ class _BottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return TextButton.icon(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: active ? scheme.primary : scheme.onSurfaceVariant,
+    final color = active ? scheme.primary : scheme.onSurfaceVariant;
+    // Icon over label, so four fit side by side
+    return Expanded(
+      child: Pressable(
+        pressedScale: 0.9,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              children: [
+                AppIcon(icon, size: 22, color: color),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium
+                      ?.copyWith(color: color),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      icon: AppIcon(icon, size: 20),
-      label: Text(label),
     );
   }
 }
